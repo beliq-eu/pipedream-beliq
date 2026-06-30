@@ -1,0 +1,22 @@
+{
+  "name": "pipedream-beliq",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "beliq connector for Pipedream: generate, validate, parse, and convert EU e-invoices. Source of truth for the components/beliq registry component.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run test/integration.test.mjs",
+    "lint": "eslint --ext .mjs,.js,.cjs components/beliq",
+    "lint:fix": "eslint --ext .mjs,.js,.cjs components/beliq --fix",
+    "scrub:check": "grep -rn $'\\u2014' components README.md examples && echo 'em-dash found' && exit 1 || echo 'no em-dash'"
+  },
+  "devDependencies": {
+    "@beliq/sdk": "^0.1.1",
+    "@pipedream/eslint-plugin-pipedream": "^0.3.0",
+    "eslint": "^8.57.0",
+    "vitest": "^3.2.0"
+  }
+}
