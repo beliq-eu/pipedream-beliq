@@ -33,10 +33,11 @@ gates are all in place and green.
   optional props with no sensible default).
 - `npm run scrub:check`: no em-dash.
 
-## Distribution (pending, operator-gated)
+## Distribution
 
-- [ ] Push the source repo to `beliq-eu/pipedream-beliq` (default branch `main`),
-  committed as `beliq <hello@beliq.eu>`.
+- [x] Source repo LIVE: **https://github.com/beliq-eu/pipedream-beliq** (public,
+  default branch `main`, committed as `beliq <hello@beliq.eu>`, pushed 2026-07-01
+  with a pinned `beliq-eu` token; active gh account stayed `tobias-dev`).
 - [ ] Open the registry PR to `PipedreamHQ/pipedream` (add the `beliq` app +
   the five actions under `components/beliq/`). The monorepo is large; add files
   via the Git Data API rather than a full clone, as done for polydoc.
