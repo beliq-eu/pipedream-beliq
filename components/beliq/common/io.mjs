@@ -59,9 +59,9 @@ export async function resolveDocument(props) {
 export async function writeDocument(result, kind, filenameOverride) {
   const contentType = result.contentType.split(";")[0].trim();
   const ext = contentType.includes("pdf") ? "pdf" : "xml";
-  const fileName = path.basename(filenameOverride || `${kind}.${ext}`);
+  const filename = path.basename(filenameOverride || `${kind}.${ext}`);
   const buffer = Buffer.from(result.bytes);
-  const filePath = path.join(process.env.STASH_DIR || "/tmp", fileName);
+  const filePath = path.join(process.env.STASH_DIR || "/tmp", filename);
   await fs.writeFile(filePath, buffer);
 
   const meta = Object.fromEntries(
@@ -73,7 +73,7 @@ export async function writeDocument(result, kind, filenameOverride) {
 
   return {
     success: true,
-    fileName,
+    filename,
     path: filePath,
     contentType,
     sizeBytes: buffer.length,
