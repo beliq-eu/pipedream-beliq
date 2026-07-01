@@ -111,7 +111,7 @@ export default {
   },
   async run({ $ }) {
     const out = await runConvert(this.beliq.client(), this);
-    $.export("$summary", `Converted to ${out.fileName} (${out.sizeBytes} bytes)`);
+    $.export("$summary", `Converted to ${out.filename} (${out.sizeBytes} bytes)`);
     return out;
   },
 };

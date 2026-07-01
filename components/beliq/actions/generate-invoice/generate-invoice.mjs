@@ -110,7 +110,7 @@ export default {
   },
   async run({ $ }) {
     const out = await runGenerate(this.beliq.client(), this);
-    $.export("$summary", `Generated ${out.fileName} (${out.sizeBytes} bytes)`);
+    $.export("$summary", `Generated ${out.filename} (${out.sizeBytes} bytes)`);
     return out;
   },
 };

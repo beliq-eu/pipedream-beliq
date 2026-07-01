@@ -90,7 +90,7 @@ describe.skipIf(!apiKey)("beliq live API", () => {
       invoice: INVOICE,
       verify: true,
     });
-    expect(generated.fileName).toBe("invoice.xml");
+    expect(generated.filename).toBe("invoice.xml");
     expect(generated.sizeBytes).toBeGreaterThan(0);
     expect(generated.xml).toContain("<");
     await sleep(300);

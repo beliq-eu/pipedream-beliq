@@ -197,7 +197,7 @@ describe("runGenerate", () => {
     // No Factur-X profile is sent for a non-hybrid standard.
     expect(sentBody.facturxProfile).toBeUndefined();
 
-    expect(result.fileName).toBe("invoice.xml");
+    expect(result.filename).toBe("invoice.xml");
     expect(result.path).toBe(`${process.env.STASH_DIR || "/tmp"}/invoice.xml`);
     expect(result.schematronVersion).toBe("1.2.3");
     expect(result.xml).toBe("<Invoice>generated</Invoice>");
@@ -225,7 +225,7 @@ describe("runGenerate", () => {
       verify: false,
     });
 
-    expect(result.fileName).toBe("invoice.pdf");
+    expect(result.filename).toBe("invoice.pdf");
     expect(result.pdfKind).toBe("facturx");
     expect(result.xml).toBeUndefined();
   });
@@ -255,7 +255,7 @@ describe("runConvert", () => {
 
     expect(calls[0].url).toContain("/v1/convert?");
     expect(calls[0].url).toContain("targetFormat=ubl");
-    expect(result.fileName).toBe("converted.xml");
+    expect(result.filename).toBe("converted.xml");
     expect(result.targetFormat).toBe("ubl");
     expect(result.sourceFormat).toBe("cii");
   });
