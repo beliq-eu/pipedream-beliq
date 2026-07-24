@@ -1,6 +1,7 @@
 import {
   LIVE_CONVERT_SOURCE_FORMATS,
   LIVE_CONVERT_TARGET_FORMATS,
+  LIVE_GENERATE_PRESETS,
   LIVE_GENERATE_STANDARDS,
   LIVE_PARSE_FORMATS,
   LIVE_PROFILES,
@@ -33,7 +34,32 @@ export function toOptions(values) {
   }));
 }
 
-export const STANDARD_OPTIONS = toOptions(LIVE_GENERATE_STANDARDS);
+// Curated profile presets (e.g. NLCIUS = Peppol BIS + the netherlands-nlcius
+// profile) are offered as extra generate targets beside the plain standards; a
+// profile preset resolves to its standard + profile at call time.
+const PROFILE_PRESETS = LIVE_GENERATE_PRESETS.filter((p) => p.profile);
+
+export const STANDARD_OPTIONS = [
+  ...toOptions(LIVE_GENERATE_STANDARDS),
+  ...PROFILE_PRESETS.map((p) => ({
+    label: p.label,
+    value: p.id,
+  })),
+];
+
+/** Resolve a Standard-dropdown value to the generate standard (and profile) it means. */
+export function resolveGenerateTarget(value) {
+  const preset = PROFILE_PRESETS.find((p) => p.id === value);
+  if (preset) {
+    return {
+      standard: preset.standard,
+      profile: preset.profile,
+      output: preset.output,
+    };
+  }
+  return { standard: value };
+}
+
 export const PROFILE_OPTIONS = toOptions(LIVE_PROFILES);
 export const VALIDATE_FORMAT_OPTIONS = toOptions(LIVE_VALIDATE_FORMATS);
 export const PARSE_FORMAT_OPTIONS = toOptions(LIVE_PARSE_FORMATS);
