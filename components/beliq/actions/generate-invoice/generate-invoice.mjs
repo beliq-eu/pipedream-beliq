@@ -3,7 +3,7 @@ import {
   asJsonObject, mapError,
 } from "../../common/client.mjs";
 import { writeDocument } from "../../common/io.mjs";
-import { isFacturxFamily, resolveGenerateTarget } from "../../common/options.mjs";
+import { resolveGenerateTarget, usableFacturxProfile } from "../../common/options.mjs";
 
 /**
  * Build a compliant e-invoice from an EN 16931 object and write the result to
@@ -16,12 +16,14 @@ export async function runGenerate(client, props) {
     standard: target.standard,
     invoice: asJsonObject(props.invoice) ?? {},
     output: target.output ?? props.output ?? "xml",
-    verify: props.verify === true,
+    // The API validates before returning unless told not to. An absent prop is
+    // the default, not an opt-out, so only an explicit false turns it off.
+    verify: props.verify !== false,
     advanced: asJsonObject(props.advanced),
   };
   if (target.profile) {
     input.profile = target.profile;
-  } else if (isFacturxFamily(target.standard) && props.facturxProfile) {
+  } else if (usableFacturxProfile(target.standard, props.facturxProfile)) {
     input.facturxProfile = props.facturxProfile;
   }
   const pdfTemplateId = (props.pdfTemplateId ?? "").trim();
@@ -47,7 +49,7 @@ export default {
   key: "beliq-generate-invoice",
   name: "Generate Invoice",
   description: "Build a compliant e-invoice document (XML or hybrid PDF/A-3) from an EN 16931 invoice object. [See the documentation](https://docs.beliq.eu).",
-  version: "0.0.2",
+  version: "0.0.1",
   type: "action",
   annotations: {
     destructiveHint: false,

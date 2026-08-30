@@ -1,4 +1,5 @@
 import {
+  isProfileAllowedForStandard,
   LIVE_CONVERT_SOURCE_FORMATS,
   LIVE_CONVERT_TARGET_FORMATS,
   LIVE_GENERATE_PRESETS,
@@ -106,4 +107,15 @@ export const CONTENT_TYPE_OPTIONS = [
 /** Profiles only apply to the Factur-X / ZUGFeRD hybrid family. */
 export function isFacturxFamily(standardOrFormat) {
   return standardOrFormat === "facturx" || standardOrFormat === "zugferd";
+}
+
+/**
+ * The chosen profile, or undefined when the standard does not accept it. One
+ * dropdown covers both hybrid standards, but they do not share a profile set:
+ * `extended-ctc-fr` is the AFNOR France CTC overlay and ZUGFeRD has no
+ * counterpart, so that pair is a 422 PROFILE_STANDARD_MISMATCH.
+ */
+export function usableFacturxProfile(standard, profile) {
+  if (!profile || !isFacturxFamily(standard)) return undefined;
+  return isProfileAllowedForStandard(standard, profile) ? profile : undefined;
 }
