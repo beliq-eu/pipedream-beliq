@@ -254,6 +254,85 @@ describe("runGenerate", () => {
     expect(sentBody.profile).toBe("netherlands-nlcius");
     // NLCIUS is a UBL profile: the preset forces XML even though pdf was passed.
     expect(sentBody.output).toBe("xml");
+    // ... and with XML output there is nothing to render.
+    expect(sentBody.template).toBeUndefined();
+  });
+
+  // XRechnung and Peppol BIS have no hybrid PDF. The API refuses PDF output for
+  // them unless the request names a visual to render, so without `template` the
+  // PDF choice is a 400 no prop value avoids.
+  it("asks for the built-in visual when PDF is chosen and no stored template is given", async () => {
+    const {
+      client, calls,
+    } = clientReturning(() => new Response("%PDF-1.7 visual", {
+      status: 200,
+      headers: {
+        "content-type": "application/pdf",
+      },
+    }));
+
+    await runGenerate(client, {
+      standard: "xrechnung",
+      output: "pdf",
+      invoice: {
+        number: "INV-3",
+      },
+      verify: false,
+    });
+
+    const sentBody = JSON.parse(bodyText(calls[0].body));
+    expect(sentBody.output).toBe("pdf");
+    expect(sentBody.template).toBe("standard");
+  });
+
+  // Factur-X and ZUGFeRD render their page either way, so the same field goes
+  // out for them too rather than being gated on a standard list the connector
+  // would then have to keep in step with the API.
+  it("asks for the built-in visual on the hybrid standards as well", async () => {
+    const {
+      client, calls,
+    } = clientReturning(() => new Response("%PDF-1.7 hybrid", {
+      status: 200,
+      headers: {
+        "content-type": "application/pdf",
+      },
+    }));
+
+    await runGenerate(client, {
+      standard: "zugferd",
+      output: "pdf",
+      invoice: {
+        number: "INV-4",
+      },
+      verify: false,
+    });
+
+    expect(JSON.parse(bodyText(calls[0].body)).template).toBe("standard");
+  });
+
+  it("prefers a stored template over the built-in visual", async () => {
+    const {
+      client, calls,
+    } = clientReturning(() => new Response("%PDF-1.7 visual", {
+      status: 200,
+      headers: {
+        "content-type": "application/pdf",
+      },
+    }));
+
+    await runGenerate(client, {
+      standard: "xrechnung",
+      output: "pdf",
+      pdfTemplateId: "k3d-9mp",
+      invoice: {
+        number: "INV-5",
+      },
+      verify: false,
+    });
+
+    const sentBody = JSON.parse(bodyText(calls[0].body));
+    expect(sentBody.pdfTemplateId).toBe("k3d-9mp");
+    expect(sentBody.template).toBeUndefined();
   });
 });
 
