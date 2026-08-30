@@ -37,7 +37,7 @@ const SAMPLE_INVOICE = {
     },
     peppol: {
       schemeId: "0088",
-      id: "4030000000001",
+      id: "4030000000003",
     },
   },
   buyer: {
@@ -52,7 +52,7 @@ const SAMPLE_INVOICE = {
     },
     peppol: {
       schemeId: "0088",
-      id: "4030000000002",
+      id: "4030000000027",
     },
   },
   lines: [
