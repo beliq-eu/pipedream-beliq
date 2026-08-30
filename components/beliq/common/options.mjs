@@ -73,7 +73,10 @@ export const OUTPUT_OPTIONS = [
     value: "xml",
   },
   {
-    label: "PDF (hybrid PDF/A-3)",
+    // "PDF" without a qualifier: whether it is a hybrid PDF/A-3 or a
+    // visualization with no embedded XML depends on the chosen standard, which
+    // a static label cannot say. The Output description carries that.
+    label: "PDF",
     value: "pdf",
   },
 ];

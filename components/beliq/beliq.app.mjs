@@ -97,7 +97,7 @@ export default {
     output: {
       type: "string",
       label: "Output",
-      description: "`xml` for a pure e-invoice, or `pdf` for a hybrid PDF/A-3 with the XML embedded.",
+      description: "`xml` for a pure e-invoice. `pdf` gives a hybrid PDF/A-3 with the XML embedded on Factur-X and ZUGFeRD; XRechnung and Peppol BIS have no hybrid form, so they return a visualization with no XML inside it and their legal document stays the XML.",
       options: OUTPUT_OPTIONS,
       default: "xml",
     },
@@ -125,7 +125,7 @@ export default {
     pdfTemplateId: {
       type: "string",
       label: "PDF Template ID",
-      description: "Render the hybrid PDF from a saved dashboard template (PDF output only).",
+      description: "Render the PDF from a saved dashboard template instead of the built-in layout (PDF output only). Needs an authenticated organisation and a template that already exists.",
       optional: true,
     },
     inputSource: {
