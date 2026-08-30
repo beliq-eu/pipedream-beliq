@@ -1,7 +1,7 @@
 # pipedream-beliq roadmap
 
 beliq connector for Pipedream (portfolio item D6.2 in
-`~/Projects/beliq/tools/CONNECTORS-ROADMAP.md`). The component lives under
+`~/Projects/beliq/beliq-hq/CONNECTORS-ROADMAP.md`). The component lives under
 `components/beliq/`, laid out copy-paste-ready into the `PipedreamHQ/pipedream`
 registry. It is a thin adapter over the published `@beliq/sdk`, mirroring the
 `activepieces-beliq` connector.
