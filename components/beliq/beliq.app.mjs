@@ -13,30 +13,46 @@ import {
 
 // A self-contained EN 16931 invoice used as the Generate action's default, so
 // the action runs out of the box and documents the expected shape.
+// The prefilled example, and the shape a first run actually succeeds with. The
+// request schema was already satisfied; XRechnung's own rules were not, since
+// BR-DE-2 wants a seller contact and PEPPOL-EN16931-R010/R020 want an
+// electronic address on both parties. Verified against POST /v1/generate.
 const SAMPLE_INVOICE = {
   number: "INV-2026-001",
   issueDate: "2026-01-15",
   dueDate: "2026-02-14",
   currencyCode: "EUR",
-  buyerReference: "BUYER-REF-01",
+  buyerReference: "991-12345-67",
   seller: {
     name: "Seller GmbH",
     vatId: "DE123456789",
+    contactName: "A Person",
+    email: "billing@seller.example",
+    phone: "+49 30 123456",
     address: {
       street: "Hauptstrasse 1",
       city: "Berlin",
       postalCode: "10115",
       countryCode: "DE",
     },
+    peppol: {
+      schemeId: "0088",
+      id: "4030000000001",
+    },
   },
   buyer: {
     name: "Buyer SARL",
     vatId: "FR12345678901",
+    email: "ap@buyer.example",
     address: {
       street: "Rue de la Paix 2",
       city: "Paris",
       postalCode: "75002",
       countryCode: "FR",
+    },
+    peppol: {
+      schemeId: "0088",
+      id: "4030000000002",
     },
   },
   lines: [
