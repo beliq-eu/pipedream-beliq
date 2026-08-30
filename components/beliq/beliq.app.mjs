@@ -88,7 +88,7 @@ export default {
     facturxProfile: {
       type: "string",
       label: "Factur-X / ZUGFeRD Profile",
-      description: "Applied only when Standard (or Target Format) is Factur-X or ZUGFeRD.",
+      description: "Applied only when Standard (or Target Format) is Factur-X or ZUGFeRD. EXTENDED CTC FR is a Factur-X profile; ZUGFeRD ignores it.",
       options: PROFILE_OPTIONS,
       optional: true,
       default: "en16931",

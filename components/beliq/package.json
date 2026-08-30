@@ -1,6 +1,6 @@
 {
   "name": "@pipedream/beliq",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "description": "beliq: generate, validate, parse, and convert EU-compliant e-invoices (XRechnung, ZUGFeRD, Factur-X, Peppol BIS) against authority-pinned, drift-checked rules.",
   "main": "beliq.app.mjs",
   "type": "module",
@@ -23,6 +23,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@beliq/sdk": "^0.2.0"
+    "@beliq/sdk": "^0.3.0"
   }
 }
