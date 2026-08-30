@@ -257,6 +257,71 @@ describe("runGenerate", () => {
   });
 });
 
+describe("runGenerate profile and verify gating", () => {
+  async function generate(props) {
+    const {
+      client, calls,
+    } = clientReturning(() => new Response("<Invoice/>", {
+      status: 200,
+      headers: {
+        "content-type": "application/xml",
+      },
+    }));
+    await runGenerate(client, {
+      output: "xml",
+      invoice: {
+        number: "INV-1",
+      },
+      advanced: {},
+      ...props,
+    });
+    return JSON.parse(bodyText(calls[0].body));
+  }
+
+  it("drops the France CTC overlay profile on ZUGFeRD", async () => {
+    // One dropdown covers both hybrid standards, but ZUGFeRD has no counterpart
+    // for extended-ctc-fr, so the pair is a 422 PROFILE_STANDARD_MISMATCH.
+    const body = await generate({
+      standard: "zugferd",
+      facturxProfile: "extended-ctc-fr",
+    });
+    expect(body.facturxProfile).toBeUndefined();
+  });
+
+  it("keeps a profile the standard does accept", async () => {
+    const body = await generate({
+      standard: "facturx",
+      facturxProfile: "extended-ctc-fr",
+    });
+    expect(body.facturxProfile).toBe("extended-ctc-fr");
+  });
+
+  it("keeps a profile ZUGFeRD shares with Factur-X", async () => {
+    const body = await generate({
+      standard: "zugferd",
+      facturxProfile: "extended",
+    });
+    expect(body.facturxProfile).toBe("extended");
+  });
+
+  it("verifies when the prop is absent, matching its declared default", async () => {
+    // An absent prop is the default, not an opt-out: a workflow saved before the
+    // prop existed must not silently skip validation.
+    const body = await generate({
+      standard: "xrechnung",
+    });
+    expect(body.verify).toBe(true);
+  });
+
+  it("skips verification only on an explicit false", async () => {
+    const body = await generate({
+      standard: "xrechnung",
+      verify: false,
+    });
+    expect(body.verify).toBe(false);
+  });
+});
+
 describe("runConvert", () => {
   it("passes the target format and writes the converted bytes to /tmp", async () => {
     const {

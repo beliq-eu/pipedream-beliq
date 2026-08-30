@@ -14,7 +14,7 @@
     "scrub:check": "grep -rn $'\\u2014' components README.md examples && echo 'em-dash found' && exit 1 || echo 'no em-dash'"
   },
   "devDependencies": {
-    "@beliq/sdk": "^0.2.0",
+    "@beliq/sdk": "^0.3.0",
     "@pipedream/eslint-plugin-pipedream": "^0.3.0",
     "eslint": "^8.57.0",
     "vitest": "^3.2.0"
