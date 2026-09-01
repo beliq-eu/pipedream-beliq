@@ -18,11 +18,10 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
+          cache: npm
 
-      # No committed lockfile (see .gitignore): @beliq/sdk resolves fresh from
-      # the registry, which is also how the registry monorepo builds these.
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Lint
         run: npm run lint
