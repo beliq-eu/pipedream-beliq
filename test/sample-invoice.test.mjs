@@ -3,11 +3,10 @@ import {
 } from "vitest";
 import beliqApp from "../components/beliq/beliq.app.mjs";
 
-// The sample invoice is what a user's first run sends. On XRechnung it succeeded
-// even with a malformed Peppol id, because the CII builder ignores party.peppol
-// entirely (bq-engine#267) and addresses the party by email. On Peppol BIS the
-// UBL builder does use it, and PEPPOL-COMMON-R040 rejects a GLN whose GS1 check
-// digit is wrong: fatal, four times, before the invoice is even looked at. So
+// The sample invoice is what a user's first run sends. On Peppol BIS a GLN whose
+// GS1 check digit is wrong is fatal four times over before the invoice is even
+// looked at (PEPPOL-COMMON-R040). Every other standard emits the id and says
+// nothing: KoSIT's XRechnung packs carry no R040, so a malformed id ships. So
 // the sample needs a check the standard itself applies.
 
 /**
