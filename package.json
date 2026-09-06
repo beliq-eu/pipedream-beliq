@@ -6,7 +6,7 @@
   "license": "MIT",
   "description": "beliq connector for Pipedream: generate, validate, parse, and convert EU e-invoices. Source of truth for the components/beliq registry component.",
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --exclude test/integration.test.mjs",
     "test:watch": "vitest",
     "test:integration": "vitest run test/integration.test.mjs",
     "lint": "eslint --ext .mjs,.js,.cjs components/beliq",
