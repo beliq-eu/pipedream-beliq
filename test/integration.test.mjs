@@ -1,6 +1,7 @@
 import {
   describe, expect, it,
 } from "vitest";
+import beliqApp from "../components/beliq/beliq.app.mjs";
 import { createClient } from "../components/beliq/common/client.mjs";
 import { runGenerate } from "../components/beliq/actions/generate-invoice/generate-invoice.mjs";
 import { runValidate } from "../components/beliq/actions/validate-invoice/validate-invoice.mjs";
@@ -21,59 +22,9 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const INVOICE = {
-  number: "INV-PD-001",
-  issueDate: "2026-01-15",
-  dueDate: "2026-02-14",
-  currencyCode: "EUR",
-  buyerReference: "BUYER-REF-01",
-  seller: {
-    name: "Seller GmbH",
-    vatId: "DE123456789",
-    address: {
-      street: "Hauptstrasse 1",
-      city: "Berlin",
-      postalCode: "10115",
-      countryCode: "DE",
-    },
-  },
-  buyer: {
-    name: "Buyer SARL",
-    vatId: "FR12345678901",
-    address: {
-      street: "Rue de la Paix 2",
-      city: "Paris",
-      postalCode: "75002",
-      countryCode: "FR",
-    },
-  },
-  lines: [
-    {
-      description: "Consulting services",
-      quantity: 10,
-      unitCode: "HUR",
-      unitPrice: 100,
-      lineTotal: 1000,
-      vatRate: 19,
-      vatCategoryCode: "S",
-    },
-  ],
-  taxSummary: [
-    {
-      vatCategoryCode: "S",
-      vatRate: 19,
-      taxableAmount: 1000,
-      taxAmount: 190,
-    },
-  ],
-  paymentMeans: {
-    typeCode: "58",
-    iban: "DE89370400440532013000",
-  },
-  totalNetAmount: 1000,
-  totalTaxAmount: 190,
-  totalGrossAmount: 1190,
-};
+// SAMPLE_INVOICE is the prop default a user's first run sends, so the smoke
+// drives that exact object rather than a second copy that can drift from it.
+const INVOICE = JSON.parse(JSON.stringify(beliqApp.propDefinitions.invoice.default));
 
 describe.skipIf(!apiKey)("beliq live API", () => {
   it("Check Account returns the plan context without consuming quota", async () => {
