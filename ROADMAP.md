@@ -1,5 +1,7 @@
 # pipedream-beliq roadmap
 
+`status: live, next: open the registry PR to PipedreamHQ/pipedream adding components/beliq through the Git Data API`
+
 beliq connector for Pipedream (portfolio item D6.2 in
 `~/Projects/beliq/beliq-hq/CONNECTORS-ROADMAP.md`). The component lives under
 `components/beliq/`, laid out copy-paste-ready into the `PipedreamHQ/pipedream`
@@ -19,16 +21,20 @@ gates are all in place and green.
   (LIVE_* -> dropdowns), `common/io.mjs` (text/file input, /tmp output).
 - [x] Five actions: generate-invoice, validate-invoice, parse-invoice, convert-invoice,
   check-account (zero quota).
-- [x] Unit tests (`test/connector.test.mjs`) + live smoke (`test/integration.test.mjs`).
+- [x] Unit tests (`test/connector.test.mjs`, `test/sample-invoice.test.mjs`) +
+  live smoke (`test/integration.test.mjs`).
 - [x] Per-action examples + README + this roadmap.
 
 ## Verified
 
-- `npm test`: 15 offline unit tests pass. They drive a real `@beliq/sdk` `Beliq`
-  client over an injected recording `fetch` and write binary output to the real
-  `/tmp`; only the network boundary is doubled. Asserts prop -> SDK-call mapping,
-  the wire request (URL, method, content type, body), response parsing, output
-  shaping, error mapping, and that the option lists come from the SDK LIVE_* lists.
+- `npm test`: 27 offline tests pass, 24 in `test/connector.test.mjs` and 3 in
+  `test/sample-invoice.test.mjs`; the 2 live smoke tests skip without a key. They
+  drive a real `@beliq/sdk` `Beliq` client over an injected recording `fetch` and
+  write binary output to the real `/tmp`; only the network boundary is doubled.
+  Asserts prop -> SDK-call mapping, the wire request (URL, method, content type,
+  body), response parsing, output shaping, error mapping, that the option lists
+  come from the SDK LIVE_* lists, and that the sample invoice's Peppol ids carry
+  a valid GS1 check digit.
 - `npm run lint`: 0 errors, 5 advisory `default-value` warnings (genuinely
   optional props with no sensible default).
 - `npm run scrub:check`: no em-dash.
@@ -44,7 +50,8 @@ gates are all in place and green.
 - [ ] Pipedream must provision the `beliq` app auth (an `api_key` secret field
   and the connect-time test request) before the components are testable end to
   end and the PR can merge. Flag it in the PR body.
-- [ ] Wire `BELIQ_API_KEY` and run `npm run test:integration` against the live API.
+- [ ] Wire `BELIQ_API_KEY` and run `npm run test:integration` against the live
+  API. `api.beliq.eu` answers, so the key is the only input still to arrange.
 - [ ] Install in a real Pipedream workflow, connect an account, run the five
   actions, and capture screenshots.
 
