@@ -11,7 +11,7 @@
     "test:integration": "vitest run test/integration.test.mjs",
     "lint": "eslint --ext .mjs,.js,.cjs components/beliq",
     "lint:fix": "eslint --ext .mjs,.js,.cjs components/beliq --fix",
-    "scrub:check": "grep -rn $'\\u2014' components README.md examples && echo 'em-dash found' && exit 1 || echo 'no em-dash'"
+    "scrub:check": "bash scripts/scrub-check.sh"
   },
   "devDependencies": {
     "@beliq/sdk": "^0.3.0",
