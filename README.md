@@ -58,7 +58,7 @@ npm run scrub:check # fail on a stray em-dash
 Live smoke tests run against the real API and are skipped unless a key is set:
 
 ```bash
-BELIQ_API_KEY=sk_... npm run test:integration
+BELIQ_API_KEY=blq_test_... npm run test:integration
 ```
 
 See [`examples/`](./examples) for per-action workflow sketches.
