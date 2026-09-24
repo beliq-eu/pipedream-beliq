@@ -1,61 +1,16 @@
 import beliq from "../../beliq.app.mjs";
-import {
-  asJsonObject, mapError,
-} from "../../common/client.mjs";
 import { writeDocument } from "../../common/io.mjs";
-import { resolveGenerateTarget, usableFacturxProfile } from "../../common/options.mjs";
-
-/**
- * Build a compliant e-invoice from an EN 16931 object and write the result to
- * the synced /tmp dir. Pure of Pipedream specifics so it is unit-testable with
- * a real SDK client over an injected fetch.
- */
-export async function runGenerate(client, props) {
-  const target = resolveGenerateTarget(props.standard);
-  const input = {
-    standard: target.standard,
-    invoice: asJsonObject(props.invoice) ?? {},
-    output: target.output ?? props.output ?? "xml",
-    // The API validates before returning unless told not to. An absent prop is
-    // the default, not an opt-out, so only an explicit false turns it off.
-    verify: props.verify !== false,
-    advanced: asJsonObject(props.advanced),
-  };
-  if (target.profile) {
-    input.profile = target.profile;
-  } else if (usableFacturxProfile(target.standard, props.facturxProfile)) {
-    input.facturxProfile = props.facturxProfile;
-  }
-  const pdfTemplateId = (props.pdfTemplateId ?? "").trim();
-  if (pdfTemplateId) {
-    input.pdfTemplateId = pdfTemplateId;
-  } else if (input.output === "pdf") {
-    // XRechnung and Peppol BIS have no hybrid PDF, and the API refuses PDF for
-    // them unless the request names a visual to render. Factur-X and ZUGFeRD
-    // render theirs either way, so this is inert for them.
-    input.template = "standard";
-  }
-
-  let result;
-  try {
-    result = await client.generate(input);
-  } catch (error) {
-    throw mapError(error);
-  }
-
-  const out = await writeDocument(result, "invoice", props.filename);
-  if (result.xml) {
-    out.xml = result.xml;
-  }
-  return out;
-}
+import {
+  parseObject, resolveGenerateTarget, usableFacturxProfile,
+} from "../../common/utils.mjs";
 
 export default {
   key: "beliq-generate-invoice",
   name: "Generate Invoice",
-  description: "Build a compliant e-invoice document (XML or hybrid PDF/A-3) from an EN 16931 invoice object. [See the documentation](https://docs.beliq.eu).",
+  description: "Create a standard-compliant e-invoice from a JSON invoice object and write it to `/tmp`: XML (XRechnung, ZUGFeRD, Factur-X, Peppol BIS) or a PDF (a hybrid PDF/A-3 on Factur-X and ZUGFeRD). Use it when you have invoice data, e.g. from a CRM, shop or spreadsheet row, and need a file to send or archive. Returns the file's `path`, and with XML output the `xml` text too; pass the `path` to **Validate Invoice** or **Convert Invoice**. With Validate Result on (the default), an invoice that breaks a rule fails with the rule IDs instead of returning a non-compliant document. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/generate/)",
   version: "0.0.1",
   type: "action",
+  ai: "optimized",
   annotations: {
     destructiveHint: false,
     openWorldHint: true,
@@ -118,7 +73,36 @@ export default {
     },
   },
   async run({ $ }) {
-    const out = await runGenerate(this.beliq.client(), this);
+    const target = resolveGenerateTarget(this.standard);
+    const input = {
+      standard: target.standard,
+      invoice: parseObject(this.invoice, "Invoice") ?? {},
+      output: target.output ?? this.output ?? "xml",
+      // The API validates before returning unless told not to. An absent prop is
+      // the default, not an opt-out, so only an explicit false turns it off.
+      verify: this.verify !== false,
+      advanced: parseObject(this.advanced, "Advanced (JSON)"),
+    };
+    if (target.profile) {
+      input.profile = target.profile;
+    } else if (usableFacturxProfile(target.standard, this.facturxProfile)) {
+      input.facturxProfile = this.facturxProfile;
+    }
+    const pdfTemplateId = (this.pdfTemplateId ?? "").trim();
+    if (pdfTemplateId) {
+      input.pdfTemplateId = pdfTemplateId;
+    } else if (input.output === "pdf") {
+      // XRechnung and Peppol BIS have no hybrid PDF, and the API refuses PDF for
+      // them unless the request names a visual to render. Factur-X and ZUGFeRD
+      // render theirs either way, so this is inert for them.
+      input.template = "standard";
+    }
+
+    const result = await this.beliq.generateInvoice(input);
+    const out = await writeDocument(result, "invoice", this.filename);
+    if (result.xml) {
+      out.xml = result.xml;
+    }
     $.export("$summary", `Generated ${out.filename} (${out.sizeBytes} bytes)`);
     return out;
   },

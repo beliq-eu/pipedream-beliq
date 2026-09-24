@@ -1,39 +1,18 @@
 import beliq from "../../beliq.app.mjs";
-import {
-  asJsonObject, mapError,
-} from "../../common/client.mjs";
 import { resolveDocument } from "../../common/io.mjs";
-
-/**
- * Validate an XML or PDF invoice against beliq's authority-pinned rules and
- * return the structured verdict. Unit-testable with a real SDK client.
- */
-export async function runValidate(client, props) {
-  const {
-    bytes, contentType,
-  } = await resolveDocument(props);
-  try {
-    return await client.validate(bytes, {
-      format: props.format,
-      franceCtc: props.franceCtc === true,
-      contentType,
-      advanced: asJsonObject(props.advanced),
-    });
-  } catch (error) {
-    throw mapError(error);
-  }
-}
+import { parseObject } from "../../common/utils.mjs";
 
 export default {
   key: "beliq-validate-invoice",
   name: "Validate Invoice",
-  description: "Check an XML or PDF invoice against beliq authority-pinned rules. [See the documentation](https://docs.beliq.eu).",
+  description: "Check an XML or PDF e-invoice against the rules of its standard (EN 16931 plus the national rules, e.g. XRechnung or Peppol BIS) and return a verdict: `valid`, and the failing rules with their IDs and messages. Use it before sending an invoice, or to check one you received. Takes pasted XML or a file, e.g. the `path` that **Generate Invoice** or **Convert Invoice** returns. An invalid document is a normal result, not an error. Uses one document of quota; **Check Account** shows how many are left. [See the documentation](https://docs.beliq.eu/api-reference/validate/)",
   version: "0.0.1",
   type: "action",
+  ai: "optimized",
   annotations: {
     destructiveHint: false,
     openWorldHint: true,
-    readOnlyHint: false,
+    readOnlyHint: true,
   },
   props: {
     beliq,
@@ -79,9 +58,23 @@ export default {
         "advanced",
       ],
     },
+    syncDir: {
+      type: "dir",
+      accessMode: "read",
+      sync: true,
+    },
   },
   async run({ $ }) {
-    const result = await runValidate(this.beliq.client(), this);
+    const {
+      bytes, contentType,
+    } = await resolveDocument(this);
+    const result = await this.beliq.validateInvoice({
+      document: bytes,
+      format: this.format,
+      franceCtc: this.franceCtc === true,
+      contentType,
+      advanced: parseObject(this.advanced, "Advanced (JSON)"),
+    });
     const errorCount = Array.isArray(result.errors)
       ? result.errors.length
       : 0;
