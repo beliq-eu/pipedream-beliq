@@ -208,7 +208,12 @@ CodeRabbit fix:
 - [x] CodeRabbit's first pass on #22073 (2026-09-25): 1 actionable finding, the
   Invoice default, fixed in both `registry-preflight` (#26) and `add-beliq-app`
   and answered on the thread without marking it resolved (the PR template asks
-  for that). Later CodeRabbit passes, and any maintainer review, get the same
+  for that). Second pass (on `feb3fa9d`): 2 minor findings, both fixed. The
+  Invoice description now lists all three ways a party's electronic address
+  resolves (`peppol`, `email`, `vatId` + country) and says a cross-border EU
+  sale is usually reverse charge (`AE`). The sample's buyer is now German, since
+  19% German VAT on consulting for a French VAT-registered buyer was the wrong
+  treatment. Later CodeRabbit passes, and any maintainer review, get the same
   treatment.
 - [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
   answered 404 on 2026-09-25).
