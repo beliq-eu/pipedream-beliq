@@ -201,6 +201,10 @@ CodeRabbit fix:
   - The registry's `scripts/findBadKeys.js` and `checkComponentAppProp.js` print
     nothing for beliq; in a sparse tree they exit 1 only because the other
     3402 apps' files are absent.
+- [ ] Registry CI on #22073 green. On 2026-09-25 only `Component Registry Version
+  Check` had run (pass); `Pull Request Checks` and `Components Checks` report
+  `action_required`, because a maintainer must approve workflow runs for a
+  first-time fork contributor. Nothing to do on our side until they approve.
 - [x] CodeRabbit's first pass on #22073 (2026-09-25): 1 actionable finding, the
   Invoice default, fixed in both `registry-preflight` (#26) and `add-beliq-app`
   and answered on the thread without marking it resolved (the PR template asks
