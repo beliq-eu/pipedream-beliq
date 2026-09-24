@@ -1,7 +1,7 @@
 import {
   describe, expect, it,
 } from "vitest";
-import beliqApp from "../components/beliq/beliq.app.mjs";
+import { SAMPLE_INVOICE } from "../components/beliq/common/constants.mjs";
 import generateInvoice from "../components/beliq/actions/generate-invoice/generate-invoice.mjs";
 import validateInvoice from "../components/beliq/actions/validate-invoice/validate-invoice.mjs";
 import checkAccount from "../components/beliq/actions/check-account/check-account.mjs";
@@ -18,9 +18,9 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// SAMPLE_INVOICE is the prop default a user's first run sends, so the smoke
+// SAMPLE_INVOICE is the example the Invoice description shows, so the smoke
 // drives that exact object rather than a second copy that can drift from it.
-const INVOICE = JSON.parse(JSON.stringify(beliqApp.propDefinitions.invoice.default));
+const INVOICE = JSON.parse(JSON.stringify(SAMPLE_INVOICE));
 
 // Runs with or without a key. Vitest turns an import of a missing named export
 // into undefined rather than an error, and without a key the live suite below
