@@ -215,8 +215,13 @@ CodeRabbit fix:
   19% German VAT on consulting for a French VAT-registered buyer was the wrong
   treatment. Third pass (on `86bd5d0b`): 1 minor finding, fixed. The description
   names the Peppol Directory as the source for a Peppol ID, and says to leave
-  `peppol` out when none can be confirmed. Later CodeRabbit passes, and any
-  maintainer review, get the same treatment.
+  `peppol` out when none can be confirmed. Fourth pass (on `812835c2`): 1
+  minor finding, the source of `buyerReference` (the buyer's invoicing
+  instructions; a Leitweg-ID for a German public buyer). Each pass had flagged
+  one more ID-like field, so the fix also names the code lists for `unitCode`
+  (UN/ECE Rec 20), `vatCategoryCode` (UNCL 5305) and `peppol.schemeId` (Peppol
+  EAS). Later CodeRabbit passes, and any maintainer review, get the same
+  treatment.
 - [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
   answered 404 on 2026-09-25).
 - [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
