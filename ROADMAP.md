@@ -229,8 +229,10 @@ CodeRabbit fix:
   email is required. That is wrong for XRechnung: BR-DE-5 to BR-DE-7 require
   `contactName`, `phone` and `email` (beliq docs `guides/germany.mdx:34`).
   Answered with that evidence, not changed, and the description now names those
-  rules and BR-DE-1 (`paymentMeans`). Later CodeRabbit passes, and any maintainer
-  review, get the same treatment.
+  rules and BR-DE-1 (`paymentMeans`). CodeRabbit re-checked and withdrew the
+  finding. State on 2026-09-25: 7 of 7 threads resolved, automatic reviews
+  paused on head `0226015f`. Later CodeRabbit passes, and any maintainer review,
+  get the same treatment.
 - [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
   answered 404 on 2026-09-25).
 - [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
