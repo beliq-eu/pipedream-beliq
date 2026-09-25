@@ -220,8 +220,10 @@ CodeRabbit fix:
   instructions; a Leitweg-ID for a German public buyer). Each pass had flagged
   one more ID-like field, so the fix also names the code lists for `unitCode`
   (UN/ECE Rec 20), `vatCategoryCode` (UNCL 5305) and `peppol.schemeId` (Peppol
-  EAS). Later CodeRabbit passes, and any maintainer review, get the same
-  treatment.
+  EAS). Fifth pass (on `a4cc0cbf`): 1 major finding, fixed. The reverse-charge
+  hint was too broad: an intra-EU sale of goods is category `K` (intra-community
+  supply, BR-IC-10 to BR-IC-12), and only a service is usually `AE`. Later
+  CodeRabbit passes, and any maintainer review, get the same treatment.
 - [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
   answered 404 on 2026-09-25).
 - [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
