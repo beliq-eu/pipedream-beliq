@@ -222,8 +222,15 @@ CodeRabbit fix:
   (UN/ECE Rec 20), `vatCategoryCode` (UNCL 5305) and `peppol.schemeId` (Peppol
   EAS). Fifth pass (on `a4cc0cbf`): 1 major finding, fixed. The reverse-charge
   hint was too broad: an intra-EU sale of goods is category `K` (intra-community
-  supply, BR-IC-10 to BR-IC-12), and only a service is usually `AE`. Later
-  CodeRabbit passes, and any maintainer review, get the same treatment.
+  supply, BR-IC-10 to BR-IC-12), and only a service is usually `AE`. CodeRabbit
+  then paused its automatic reviews (the status on `f6846bbc` read "Review
+  paused"), and all six threads were resolved. A review requested by hand
+  (`@coderabbitai review`) raised one more minor point: that only the seller
+  email is required. That is wrong for XRechnung: BR-DE-5 to BR-DE-7 require
+  `contactName`, `phone` and `email` (beliq docs `guides/germany.mdx:34`).
+  Answered with that evidence, not changed, and the description now names those
+  rules and BR-DE-1 (`paymentMeans`). Later CodeRabbit passes, and any maintainer
+  review, get the same treatment.
 - [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
   answered 404 on 2026-09-25).
 - [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
@@ -260,6 +267,13 @@ CodeRabbit fix:
   Settled by the first real workflow run after provisioning.
 
 ## Parked / out of scope
+
+- beliq-docs `src/content/docs/format-reference/xrechnung.mdx` (row "Seller
+  email (BT-43)") names only the seller email as required. XRechnung also
+  requires the contact point (BT-41) and the telephone number (BT-42) under
+  BR-DE-5 and BR-DE-6, as `guides/germany.mdx:34` in the same repo says.
+  CodeRabbit read the short page and concluded the other two are optional. xs;
+  a fix for the beliq-docs repo, blocks nothing here.
 
 - Four stale remote branches on `beliq-eu/pipedream-beliq`:
   `canonical-invoice-fixture`, `eslint-flat-config`, `status-convention-pass-6`,
