@@ -213,8 +213,10 @@ CodeRabbit fix:
   resolves (`peppol`, `email`, `vatId` + country) and says a cross-border EU
   sale is usually reverse charge (`AE`). The sample's buyer is now German, since
   19% German VAT on consulting for a French VAT-registered buyer was the wrong
-  treatment. Later CodeRabbit passes, and any maintainer review, get the same
-  treatment.
+  treatment. Third pass (on `86bd5d0b`): 1 minor finding, fixed. The description
+  names the Peppol Directory as the source for a Peppol ID, and says to leave
+  `peppol` out when none can be confirmed. Later CodeRabbit passes, and any
+  maintainer review, get the same treatment.
 - [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
   answered 404 on 2026-09-25).
 - [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
