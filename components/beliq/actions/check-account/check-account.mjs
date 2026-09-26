@@ -1,29 +1,12 @@
 import beliq from "../../beliq.app.mjs";
-import { mapError } from "../../common/client.mjs";
-
-/**
- * Read the account, plan, and quota context for the connected key. Hits
- * GET /v1/me, a no-quota credential check, so it never touches the monthly
- * quota. Unit-testable with a real SDK client.
- */
-export async function runCheckAccount(client) {
-  try {
-    const account = await client.me();
-    return {
-      success: true,
-      account,
-    };
-  } catch (error) {
-    throw mapError(error);
-  }
-}
 
 export default {
   key: "beliq-check-account",
   name: "Check Account",
-  description: "Verify the connected API key and read its account, plan, and quota. Does not consume quota. [See the documentation](https://docs.beliq.eu).",
+  description: "Check that the connected beliq API key works and return its account, plan and remaining document quota. Use it before a batch run to see how many documents are left, or to find out why another beliq action failed to authenticate. Costs no quota, unlike **Generate Invoice**, **Validate Invoice**, **Parse Invoice** and **Convert Invoice**, which each use one document. [See the documentation](https://docs.beliq.eu/api-reference/authentication/#verifying-a-key)",
   version: "0.0.1",
   type: "action",
+  ai: "optimized",
   annotations: {
     destructiveHint: false,
     openWorldHint: true,
@@ -33,8 +16,11 @@ export default {
     beliq,
   },
   async run({ $ }) {
-    const result = await runCheckAccount(this.beliq.client());
+    const account = await this.beliq.getAccount();
     $.export("$summary", "beliq API key is valid");
-    return result;
+    return {
+      success: true,
+      account,
+    };
   },
 };

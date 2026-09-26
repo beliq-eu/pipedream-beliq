@@ -2,10 +2,11 @@ import {
   describe, expect, it,
 } from "vitest";
 import beliqApp from "../components/beliq/beliq.app.mjs";
+import { SAMPLE_INVOICE } from "../components/beliq/common/constants.mjs";
 
-// The sample invoice is what a user's first run sends. On Peppol BIS a GLN whose
-// GS1 check digit is wrong is fatal four times over before the invoice is even
-// looked at (PEPPOL-COMMON-R040). Every other standard emits the id and says
+// The sample invoice is the example users copy from the Invoice description. On
+// Peppol BIS a GLN whose GS1 check digit is wrong is fatal four times over
+// before the invoice is even looked at (PEPPOL-COMMON-R040). Every other standard emits the id and says
 // nothing: KoSIT's XRechnung packs carry no R040, so a malformed id ships. So
 // the sample needs a check the standard itself applies.
 
@@ -27,7 +28,22 @@ function isValidGln(value) {
   return (10 - (weighted % 10)) % 10 === Number(value[dataLength]);
 }
 
-const sample = () => JSON.parse(JSON.stringify(beliqApp.propDefinitions.invoice.default));
+const sample = () => JSON.parse(JSON.stringify(SAMPLE_INVOICE));
+
+describe("the Invoice prop", () => {
+  it("shows the verified sample as its example, byte for byte", () => {
+    // What a user or an agent copies out of the description is the invoice the
+    // checks below and the live smoke run against.
+    const { description } = beliqApp.propDefinitions.invoice;
+    const block = description.match(/```json\n([\s\S]+?)\n```/);
+    expect(block).not.toBeNull();
+    expect(JSON.parse(block[1])).toEqual(SAMPLE_INVOICE);
+  });
+
+  it("has no default, so an omitted invoice is an error, not a sample", () => {
+    expect(beliqApp.propDefinitions.invoice).not.toHaveProperty("default");
+  });
+});
 
 describe("the GS1 rule the sample has to satisfy", () => {
   it("accepts a GLN with a correct check digit and rejects a wrong one", () => {
@@ -59,7 +75,7 @@ describe("sample invoice", () => {
 
 describe("the fields the XRechnung CIUS requires", () => {
   // `verify` defaults to true, so an invoice that satisfies plain EN 16931 and
-  // nothing more comes back 422 on the user's first run. Each assertion names
+  // nothing more comes back 422 on a run that copies the example. Each assertion names
   // the rule the field answers.
   const invoice = sample();
 

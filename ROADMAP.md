@@ -1,6 +1,6 @@
 # pipedream-beliq roadmap
 
-`status: forward-gated: Pipedream provisioning the beliq app requested in https://github.com/PipedreamHQ/pipedream/issues/21996, which the registry PR waits for`
+`status: in progress: registry PR https://github.com/PipedreamHQ/pipedream/pull/22073 open and waiting for Pipedream to provision the beliq app; next: on or after 2026-10-01 merge #25, then #26, and confirm main's live job`
 
 beliq connector for Pipedream (portfolio item D6.2 in
 `~/Projects/beliq/beliq-hq/CONNECTORS-ROADMAP.md`). The component lives under
@@ -85,26 +85,79 @@ line (read from the merged PR list and `git log` on 2026-09-24, `main` at
 - [x] vitest 4 (security update):
   https://github.com/beliq-eu/pipedream-beliq/pull/19
 
+## In progress: registry pre-flight
+
+https://github.com/beliq-eu/pipedream-beliq/pull/26 (branch `registry-preflight`,
+cut from #25's `item-8f`, base `main`). CI green. **Held until 2026-10-01 and
+merged after #25**, for the same reason as #25: every push to `main` runs the
+`live` job and the shared sandbox allowance resets 2026-10-01T00:00Z.
+`~/Projects/beliq/land-connectors-8f.sh` merges #25 but does not know about #26,
+so #26 is merged by hand after it. The two share #25's ROADMAP/README hunks
+verbatim, so #26 merges cleanly once #25 is squash-merged.
+
+Why: Pipedream tightened its CodeRabbit rules after PolyDoc merged
+(https://github.com/PipedreamHQ/pipedream/pull/22006 on 2026-09-22 and
+https://github.com/PipedreamHQ/pipedream/pull/22061 on 2026-09-24, in that repo's
+`.coderabbit.yaml` and `.github/pipedream-component-guidelines.md`), and the
+component failed several. What #26 changes:
+
+- [x] `ai: "optimized"` on every action; Validate and Parse `readOnlyHint: true`.
+- [x] API calls through app methods (`getAccount`, `generateInvoice`,
+  `validateInvoice`, `parseInvoice`, `convertInvoice`) and one private
+  `_makeRequest`; no try/catch in `run()`.
+- [x] Error messages carry the envelope's details: `validationResult.errors`
+  (422 INVALID_INVOICE), `fields` (400 VALIDATION_ERROR), `unmappablePaths`
+  (422 CONVERSION_LOSSY_FAILCLOSED), five at most, then the `(CODE)`.
+- [x] File input is a `file-ref` prop read through `getFileStream` from
+  `@pipedream/platform`; read `syncDir` on Validate/Parse, read-write on Convert.
+  Convert gains the Filename prop its code already read.
+- [x] Every prop description has an example; the Invoice description lists the
+  required nested fields; PDF Template ID points at the dashboard's PDF Templates
+  page (no public list route exists).
+- [x] `common/options.mjs` -> `common/constants.mjs`, `common/client.mjs` ->
+  `common/errors.mjs`, generic helpers in `common/utils.mjs`; malformed JSON is a
+  `ConfigurationError` naming the field.
+- [x] Registry-shape `components/beliq/package.json` (0.1.0, Pipedream homepage
+  and author, `@pipedream/platform` dep); `@beliq/sdk` 0.4.2 locked, the version
+  the registry lockfile resolves.
+- [x] `eslint.config.mjs` carries the monorepo root's formatting rules.
+- [x] `test/registry-rules.test.mjs` pins the review rules; the live smoke runs
+  the actions and has a keyless wiring test that CI's `test` job runs.
+- [x] The Invoice prop has no default any more (CodeRabbit's one finding on
+  https://github.com/PipedreamHQ/pipedream/pull/22073): an agent that left it
+  out got an invoice between two fictitious parties and spent a document. The
+  sample moved to `common/constants.mjs` and is rendered into the description
+  as a JSON block, pinned byte for byte to the sample the GS1, CIUS and live
+  checks run on. PolyDoc's merged `invoice` prop has no default either.
+- [ ] Merge on or after 2026-10-01, after #25; confirm `main`'s `live` job
+  reports 2 passed (not skipped).
+
 ## Verified
 
-Re-run on 2026-09-24 at `6a7d516`:
+Re-run on 2026-09-25 on branch `registry-preflight` (PR #26), after the
+CodeRabbit fix:
 
-- `npm test`: 32 offline tests pass, 24 in `test/connector.test.mjs` and 8 in
-  `test/sample-invoice.test.mjs`. The connector tests drive a real `@beliq/sdk`
-  `Beliq` client over an injected recording `fetch` and write binary output to
-  the real `/tmp`; only the network boundary is doubled. They assert prop ->
-  SDK-call mapping, the wire request (URL, method, content type, body), response
-  parsing, output shaping, error mapping, and that the option lists come from
-  the SDK LIVE_* lists. The sample-invoice tests assert that the sample
+- `npm test`: 75 offline tests pass: 33 in `test/connector.test.mjs`, 32 in
+  `test/registry-rules.test.mjs`, 10 in `test/sample-invoice.test.mjs`. The
+  connector tests run the real actions, app methods and `@beliq/sdk` client with
+  only global `fetch` doubled (other URLs pass through to the real fetch), and
+  write binary output to the real `/tmp`. They assert prop -> SDK-call mapping,
+  the wire request (URL, method, content type, key header, body), response
+  parsing, output shaping and summaries, error details, file-ref input from a
+  real file and from a local HTTP server, and that the option lists come from
+  the SDK LIVE_* lists. Each new assertion was checked against a planted defect. The sample-invoice tests assert that the sample
   invoice's Peppol ids carry a valid GS1 check digit and differ between the
   parties, and that it carries the fields the XRechnung CIUS requires (BR-DE-1,
   BR-DE-2, BR-DE-15, BR-CO-13, BR-CO-15, BR-CO-18, BR-S-01). The `test` job of
-  `main` CI run
-  https://github.com/beliq-eu/pipedream-beliq/actions/runs/35747805951 reports
-  the same 32 passed.
-- `npm run test:integration`: 2 live smoke tests in `test/integration.test.mjs`,
-  skipped when `BELIQ_API_KEY` is unset. Not run in this re-run, since it
-  spends sandbox documents. The `live` job of the same CI run reports 2 passed.
+  PR #26's CI run
+  https://github.com/beliq-eu/pipedream-beliq/actions/runs/36071480037 passes.
+- `npm run test:integration`: without a key, 1 wiring test passes and the 2 live
+  tests skip. The wiring test exists because vitest turns an import of a missing
+  named export into `undefined`, so a skipped live suite never noticed one
+  (planted and confirmed). Not run with a key in this re-run, since it spends
+  sandbox documents; the last `main` live job before #26
+  (https://github.com/beliq-eu/pipedream-beliq/actions/runs/35747805951, at
+  `6a7d516`) reports 2 passed.
 - `npm run lint`: 0 errors, 5 advisory `default-value` warnings (genuinely
   optional props with no sensible default).
 - `npm run scrub:check`: no em-dash.
@@ -115,17 +168,80 @@ Re-run on 2026-09-24 at `6a7d516`:
   default branch `main`, committed as `beliq <hello@beliq.eu>`, pushed 2026-07-01
   with a pinned `beliq-eu` token; active gh account stayed `tobias-dev`).
 - [x] App-integration request filed 2026-09-15:
-  https://github.com/PipedreamHQ/pipedream/issues/21996. Still open with no
-  comments on 2026-09-24. Pipedream integrates the app before it reviews the
-  registry PR, so that PR waits for it (`beliq-hq/CONNECTORS-ROADMAP.md`,
-  go-live row for pipedream-beliq).
-- [ ] Open the registry PR to `PipedreamHQ/pipedream` (add the `beliq` app +
-  the five actions under `components/beliq/`) once #21996 is done. The monorepo
-  is large; add files via the Git Data API rather than a full clone, as done for
-  polydoc.
-- [ ] Pipedream must provision the `beliq` app auth (an `api_key` secret field
-  and the connect-time test request) before the components are testable end to
-  end and the PR can merge. Flag it in the PR body.
+  https://github.com/PipedreamHQ/pipedream/issues/21996. No labels, comments or
+  assignee by 2026-09-25.
+- [x] **Decision 2026-09-25: stop waiting on #21996 and open the registry PR.**
+  The PR template's "request the app first" line dates from 2026-04-29, and
+  PolyDoc opened https://github.com/PipedreamHQ/pipedream/pull/21180 directly
+  anyway: a maintainer provisioned the app from the PR 7 days later and it merged
+  on day 10. The app-request backlog held 2470 open issues, with 46 filed and 5
+  closed in the preceding 30 days.
+- [x] Registry PR opened 2026-09-25:
+  **https://github.com/PipedreamHQ/pipedream/pull/22073**, from the fork
+  https://github.com/beliq-eu/pipedream branch `add-beliq-app` (commit
+  `c173c422`, committed as `beliq <hello@beliq.eu>`), linked from #21996.
+  `components/beliq` there is byte-identical to this repo's `components/beliq`
+  at `8736527` (tree `6878407`). The body flags the app auth Pipedream must
+  provision (one `api_key` secret field; `GET https://api.beliq.eu/v1/me` as the
+  free connect test), explains the SDK instead of platform axios (precedent:
+  the `stripe` and `openai` components), and names the one open check (the SDK
+  declares `node >=20.15`).
+  - How, for next time: a shallow, blobless, non-cone sparse clone
+    (`--depth=1 --filter=blob:none --no-checkout`, patterns `/package.json
+    /pnpm-lock.yaml /pnpm-workspace.yaml /.npmrc /.tool-versions
+    **/package.json`) is 8.6 MB. Every workspace `package.json` has to be
+    present, or `pnpm install --lockfile-only` deletes the missing packages'
+    lockfile entries. Use the pinned `npx pnpm@10.28.2`.
+  - A plain `pnpm install --lockfile-only` with the new importer also re-resolved
+    unrelated peer contexts (5 lines removed around `ts-jest`, `@types/node`),
+    while pristine `master` is stable under the same command. So the three
+    beliq entries (importer, package, snapshot; +15/-0) were applied by hand to
+    the pristine lockfile. pnpm accepts that file with `--frozen-lockfile`, and
+    a fresh non-frozen resolve leaves it byte-identical.
+  - The registry's `scripts/findBadKeys.js` and `checkComponentAppProp.js` print
+    nothing for beliq; in a sparse tree they exit 1 only because the other
+    3402 apps' files are absent.
+- [ ] Registry CI on #22073 green. On 2026-09-25 only `Component Registry Version
+  Check` had run (pass); `Pull Request Checks` and `Components Checks` report
+  `action_required`, because a maintainer must approve workflow runs for a
+  first-time fork contributor. Nothing to do on our side until they approve.
+- [x] CodeRabbit's first pass on #22073 (2026-09-25): 1 actionable finding, the
+  Invoice default, fixed in both `registry-preflight` (#26) and `add-beliq-app`
+  and answered on the thread without marking it resolved (the PR template asks
+  for that). Second pass (on `feb3fa9d`): 2 minor findings, both fixed. The
+  Invoice description now lists all three ways a party's electronic address
+  resolves (`peppol`, `email`, `vatId` + country) and says a cross-border EU
+  sale is usually reverse charge (`AE`). The sample's buyer is now German, since
+  19% German VAT on consulting for a French VAT-registered buyer was the wrong
+  treatment. Third pass (on `86bd5d0b`): 1 minor finding, fixed. The description
+  names the Peppol Directory as the source for a Peppol ID, and says to leave
+  `peppol` out when none can be confirmed. Fourth pass (on `812835c2`): 1
+  minor finding, the source of `buyerReference` (the buyer's invoicing
+  instructions; a Leitweg-ID for a German public buyer). Each pass had flagged
+  one more ID-like field, so the fix also names the code lists for `unitCode`
+  (UN/ECE Rec 20), `vatCategoryCode` (UNCL 5305) and `peppol.schemeId` (Peppol
+  EAS). Fifth pass (on `a4cc0cbf`): 1 major finding, fixed. The reverse-charge
+  hint was too broad: an intra-EU sale of goods is category `K` (intra-community
+  supply, BR-IC-10 to BR-IC-12), and only a service is usually `AE`. CodeRabbit
+  then paused its automatic reviews (the status on `f6846bbc` read "Review
+  paused"), and all six threads were resolved. A review requested by hand
+  (`@coderabbitai review`) raised one more minor point: that only the seller
+  email is required. That is wrong for XRechnung: BR-DE-5 to BR-DE-7 require
+  `contactName`, `phone` and `email` (beliq docs `guides/germany.mdx:34`).
+  Answered with that evidence, not changed, and the description now names those
+  rules and BR-DE-1 (`paymentMeans`). CodeRabbit re-checked and withdrew the
+  finding. State on 2026-09-25: 7 of 7 threads resolved, automatic reviews
+  paused on head `0226015f`. Later CodeRabbit passes, and any maintainer review,
+  get the same treatment.
+- [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
+  answered 404 on 2026-09-25).
+- [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
+  #21180 shows `polydoc.app.mjs` (+296 -4) and `package.json` (+5 -2) as
+  modified, so the maintainer's scaffold landed on `master` first. Merge
+  `master` into `add-beliq-app`, keep our files, adopt the scaffold's `$auth`
+  field names. If the slug Pipedream picks is not `beliq`, rename `app:`, the
+  directory and the `beliq-*` keys in both repos (`scripts/findBadKeys.js`
+  checks them).
 - [x] Wire `BELIQ_API_KEY` and run `npm run test:integration` against the live
   API. The repo secret is set and CI's `live` job runs the smoke on pushes to
   `main` (https://github.com/beliq-eu/pipedream-beliq/pull/16). First green
@@ -141,8 +257,31 @@ Re-run on 2026-09-24 at `6a7d516`:
 - Pipedream distributes components via the monorepo PR, not an npm publish we
   control, so the npm Trusted Publishing recipe used by the other connectors does
   not apply here.
-- The SDK uses `globalThis.fetch`. Pipedream's runtime (Node 20+) provides it, so
-  the connector does not depend on `@pipedream/platform`. Confirm in the live smoke.
-- File input accepts a `/tmp` path or a URL; a URL is fetched with `globalThis.fetch`.
-  Binary output is written to the synced `/tmp` dir (the `syncDir` prop), since
-  Pipedream steps return JSON.
+- The SDK uses `globalThis.fetch`, which Pipedream's Node 20+ runtime provides.
+  The component depends on `@pipedream/platform` only for `getFileStream` and
+  `ConfigurationError`.
+- File input is a `file-ref` prop: a `/tmp` path or a URL, read through
+  `getFileStream`. Binary output is written to the synced `/tmp` dir (the
+  `syncDir` prop), since Pipedream steps return JSON.
+- Known unknown: the Pipedream runtime's Node version. The SDK declares
+  `node >=20.15`; the monorepo's `.tool-versions` pins `nodejs 20.13.1` for its
+  own tooling, and its `.npmrc` has `engine-strict=false`, so pnpm only warns.
+  Settled by the first real workflow run after provisioning.
+
+## Parked / out of scope
+
+- beliq-docs `src/content/docs/format-reference/xrechnung.mdx` (row "Seller
+  email (BT-43)") names only the seller email as required. XRechnung also
+  requires the contact point (BT-41) and the telephone number (BT-42) under
+  BR-DE-5 and BR-DE-6, as `guides/germany.mdx:34` in the same repo says.
+  CodeRabbit read the short page and concluded the other two are optional. xs;
+  a fix for the beliq-docs repo, blocks nothing here.
+
+- Four stale remote branches on `beliq-eu/pipedream-beliq`:
+  `canonical-invoice-fixture`, `eslint-flat-config`, `status-convention-pass-6`,
+  `track-lockfile-npm-ci`. Check each one's PR is merged, then delete it. Repo
+  hygiene, about 5 minutes, blocks nothing.
+- Whether `@beliq/sdk` really needs Node 20.15 or could declare a lower floor
+  (repo `beliq-eu/beliq-sdk-node`, `package.json` `engines`). Only matters if
+  the Pipedream runtime turns out older; about an hour to check. Blocks nothing
+  today.

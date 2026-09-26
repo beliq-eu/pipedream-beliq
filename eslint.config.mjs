@@ -28,6 +28,117 @@ export default [
     },
   },
   {
+    // The PipedreamHQ/pipedream root eslint.config.mjs formatting rules, copied
+    // verbatim so a clean local lint is a clean registry lint. Re-copy them
+    // when the registry PR's lint check reports a rule missing here.
+    rules: {
+      "arrow-parens": "error",
+      "arrow-spacing": "error",
+      "array-bracket-newline": [
+        "error",
+        {
+          minItems: 1,
+        },
+      ],
+      "array-element-newline": [
+        "error",
+        "always",
+      ],
+      "comma-dangle": [
+        "error",
+        "always-multiline",
+      ],
+      "comma-spacing": "error",
+      "eol-last": "error",
+      "function-call-argument-newline": [
+        "error",
+        "consistent",
+      ],
+      "function-paren-newline": [
+        "error",
+        "consistent",
+      ],
+      "indent": [
+        "error",
+        2,
+      ],
+      "key-spacing": "error",
+      "keyword-spacing": "error",
+      "max-len": [
+        "error",
+        {
+          code: 100,
+          tabWidth: 2,
+          ignoreTrailingComments: true,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreRegExpLiterals: true,
+        },
+      ],
+      "multiline-ternary": [
+        "error",
+        "always",
+      ],
+      "newline-per-chained-call": "error",
+      "no-constant-condition": [
+        "error",
+        {
+          checkLoops: false,
+        },
+      ],
+      "no-multiple-empty-lines": [
+        "error",
+        {
+          max: 1,
+          maxBOF: 0,
+          maxEOF: 1,
+        },
+      ],
+      "no-trailing-spaces": "error",
+      "no-unused-vars": "error",
+      "object-curly-newline": [
+        "error",
+        {
+          ExportDeclaration: "always",
+          ImportDeclaration: {
+            minProperties: 2,
+            multiline: true,
+          },
+          ObjectExpression: {
+            minProperties: 1,
+            multiline: true,
+          },
+          ObjectPattern: {
+            minProperties: 2,
+            multiline: true,
+          },
+        },
+      ],
+      "object-curly-spacing": [
+        "error",
+        "always",
+      ],
+      "object-property-newline": [
+        "error",
+        {
+          allowAllPropertiesOnSameLine: false,
+        },
+      ],
+      "quote-props": [
+        "error",
+        "consistent",
+      ],
+      "quotes": "error",
+      "semi": "error",
+      "space-before-blocks": [
+        "error",
+        "always",
+      ],
+      "space-infix-ops": "error",
+    },
+  },
+  {
     // Component metadata + annotations only apply to action / source files,
     // not the app handle or shared common/ helpers.
     files: [
