@@ -18,9 +18,13 @@ package; Pipedream distributes components from the registry monorepo.
 | **Convert Invoice** | Convert an invoice document from one EN 16931 format to another. |
 | **Check Account** | Verify the connected API key and read its plan and quota. Does not consume quota. |
 
-All five actions are thin adapters over the published [`@beliq/sdk`](https://www.npmjs.com/package/@beliq/sdk),
-so the wire format (raw-body upload, content-type sniffing, the response
-envelope, header metadata) lives in one tested place.
+All five actions call the API through methods on the `beliq` app
+(`getAccount`, `generateInvoice`, `validateInvoice`, `parseInvoice`,
+`convertInvoice`). Those methods are thin adapters over the published
+[`@beliq/sdk`](https://www.npmjs.com/package/@beliq/sdk), so the wire format
+(raw-body upload, content-type sniffing, the response envelope, header metadata)
+lives in one tested place. A failed call raises an error that names the failing
+rules, fields or unconvertible paths and ends in the stable `(CODE)`.
 
 ## Authentication
 
@@ -31,9 +35,11 @@ Connect a beliq account with an API key from the
 ## Documents in and out
 
 - **Input** (Validate / Parse / Convert): paste the XML as text, or point the
-  action at a file by a `/tmp` path (for example a file written by a previous
-  step) or a public URL. Leave Content Type on Auto-detect to let beliq sniff
-  XML vs PDF from the bytes.
+  action at a file. File Path or URL is a `file-ref` prop read through
+  `getFileStream` from `@pipedream/platform`, so it takes a `/tmp` path (for
+  example the `path` a previous Generate or Convert step returned) or a URL, and
+  those actions declare a synced `/tmp` directory with read access. Leave
+  Content Type on Auto-detect to let beliq sniff XML vs PDF from the bytes.
 - **Output** (Generate / Convert): the produced document is written to the
   step's synced `/tmp` directory and the action returns the file path plus
   metadata (content type, size, and the response headers such as the Schematron
@@ -50,12 +56,16 @@ stay with your access point.
 
 ```bash
 npm install
-npm test            # offline unit tests (real SDK client over an injected fetch)
-npm run lint        # Pipedream component lint
+npm test            # offline tests: the real actions, app methods and SDK
+                    # client, with only global fetch doubled; plus the
+                    # registry review rules (test/registry-rules.test.mjs)
+npm run lint        # Pipedream component lint plus the registry's formatting rules
 npm run scrub:check # fail on a stray em-dash
 ```
 
-Live smoke tests run against the real API and are skipped unless a key is set:
+Live smoke tests run against the real API and are skipped unless a key is set.
+Without a key the file still runs one wiring test, which CI uses to catch a live
+suite that imports something a change renamed:
 
 ```bash
 BELIQ_API_KEY=blq_test_... npm run test:integration

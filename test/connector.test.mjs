@@ -1,33 +1,51 @@
 import os from "os";
 import path from "path";
+import http from "http";
 import fsp from "fs/promises";
 import {
-  describe, expect, it,
+  afterEach, beforeEach, describe, expect, it, vi,
 } from "vitest";
-import { Beliq } from "@beliq/sdk";
-import { runGenerate } from "../components/beliq/actions/generate-invoice/generate-invoice.mjs";
-import { runValidate } from "../components/beliq/actions/validate-invoice/validate-invoice.mjs";
-import { runParse } from "../components/beliq/actions/parse-invoice/parse-invoice.mjs";
-import { runConvert } from "../components/beliq/actions/convert-invoice/convert-invoice.mjs";
-import { runCheckAccount } from "../components/beliq/actions/check-account/check-account.mjs";
-import {
-  asJsonObject, createClient, mapError,
-} from "../components/beliq/common/client.mjs";
+import { ConfigurationError } from "@pipedream/platform";
+import generateInvoice from "../components/beliq/actions/generate-invoice/generate-invoice.mjs";
+import validateInvoice from "../components/beliq/actions/validate-invoice/validate-invoice.mjs";
+import parseInvoice from "../components/beliq/actions/parse-invoice/parse-invoice.mjs";
+import convertInvoice from "../components/beliq/actions/convert-invoice/convert-invoice.mjs";
+import checkAccount from "../components/beliq/actions/check-account/check-account.mjs";
+import { mapError } from "../components/beliq/common/errors.mjs";
 import { resolveDocument } from "../components/beliq/common/io.mjs";
+import { parseObject } from "../components/beliq/common/utils.mjs";
 import {
   CONVERT_TARGET_OPTIONS,
   STANDARD_OPTIONS,
   VALIDATE_FORMAT_OPTIONS,
-} from "../components/beliq/common/options.mjs";
+} from "../components/beliq/common/constants.mjs";
+import { runAction } from "./harness.mjs";
 
-// These tests drive a real SDK client whose only injected boundary is `fetch`
-// (a recorder returning a canned Response). The binary writers hit the real
-// /tmp dir. So prop -> SDK-call mapping, the wire request, response parsing, and
-// output shaping are all asserted against real SDK code, not a re-implementation.
+// These tests run the real actions against the real app methods and a real SDK
+// client. The only doubled boundary is the network: global fetch is replaced by
+// a recorder that answers api.beliq.eu with a canned Response and passes every
+// other URL to the real fetch. The binary writers hit the real /tmp dir. So
+// prop -> SDK-call mapping, the wire request, response parsing, error mapping
+// and output shaping are all asserted against shipped code.
 
-function clientReturning(responder) {
-  const calls = [];
-  const fetchImpl = async (url, init) => {
+const API_ORIGIN = "https://api.beliq.eu/";
+const realFetch = globalThis.fetch;
+let calls;
+let responder;
+
+function respondWith(fn) {
+  responder = fn;
+}
+
+beforeEach(() => {
+  calls = [];
+  responder = () => {
+    throw new Error("the test did not set a response");
+  };
+  vi.stubGlobal("fetch", async (url, init) => {
+    if (!String(url).startsWith(API_ORIGIN)) {
+      return realFetch(url, init);
+    }
     calls.push({
       url: String(url),
       method: init?.method,
@@ -35,15 +53,12 @@ function clientReturning(responder) {
       body: init?.body,
     });
     return responder();
-  };
-  return {
-    client: new Beliq({
-      apiKey: "test-key",
-      fetch: fetchImpl,
-    }),
-    calls,
-  };
-}
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify({
@@ -57,12 +72,17 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-function errorResponse(code, message, status = 400) {
+function errorResponse(code, message, status = 400, details) {
   return new Response(JSON.stringify({
     success: false,
     error: {
       code,
       message,
+      ...(details
+        ? {
+          details,
+        }
+        : {}),
     },
   }), {
     status,
@@ -82,7 +102,7 @@ function bodyText(body) {
   return String(body ?? "");
 }
 
-describe("runValidate", () => {
+describe("Validate Invoice", () => {
   it("sends pasted text as the raw body and returns the parsed verdict", async () => {
     const verdict = {
       valid: true,
@@ -90,11 +110,11 @@ describe("runValidate", () => {
       errors: [],
       warnings: [],
     };
-    const {
-      client, calls,
-    } = clientReturning(() => jsonResponse(verdict));
+    respondWith(() => jsonResponse(verdict));
 
-    const result = await runValidate(client, {
+    const {
+      result, summary,
+    } = await runAction(validateInvoice, {
       inputSource: "text",
       documentText: "<Invoice/>",
       contentType: "auto",
@@ -103,25 +123,51 @@ describe("runValidate", () => {
     });
 
     expect(result).toEqual(verdict);
+    expect(summary).toBe("Document is valid");
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe("POST");
     expect(calls[0].url).toMatch(/^https:\/\/api\.beliq\.eu\/v1\/validate\?/);
     expect(calls[0].url).toContain("format=auto");
     // Auto content type sniffs XML from the leading bytes.
     expect(calls[0].headers.get("content-type")).toBe("application/xml");
+    // The connected account's key, not a key of the test's own.
+    expect(calls[0].headers.get("x-api-key")).toBe("test-key");
     expect(bodyText(calls[0].body)).toBe("<Invoice/>");
   });
 
-  it("honors an explicit PDF content type override", async () => {
+  it("returns an invalid verdict as a result and counts its errors in the summary", async () => {
+    respondWith(() => jsonResponse({
+      valid: false,
+      format: "cii",
+      errors: [
+        {
+          ruleId: "BR-DE-2",
+        },
+        {
+          ruleId: "BR-DE-15",
+        },
+      ],
+    }));
+
     const {
-      client, calls,
-    } = clientReturning(() => jsonResponse({
+      result, summary,
+    } = await runAction(validateInvoice, {
+      inputSource: "text",
+      documentText: "<Invoice/>",
+    });
+
+    expect(result.valid).toBe(false);
+    expect(summary).toBe("Document is invalid (2 errors)");
+  });
+
+  it("honors an explicit PDF content type override", async () => {
+    respondWith(() => jsonResponse({
       valid: true,
       format: "cii",
       errors: [],
     }));
 
-    await runValidate(client, {
+    await runAction(validateInvoice, {
       inputSource: "text",
       documentText: "%PDF-1.7 ...",
       contentType: "application/pdf",
@@ -131,9 +177,9 @@ describe("runValidate", () => {
   });
 
   it("maps a beliq error envelope to a flat readable error", async () => {
-    const { client } = clientReturning(() => errorResponse("VALIDATION_ERROR", "bad document"));
+    respondWith(() => errorResponse("VALIDATION_ERROR", "bad document"));
 
-    await expect(runValidate(client, {
+    await expect(runAction(validateInvoice, {
       inputSource: "text",
       documentText: "<x/>",
       contentType: "auto",
@@ -141,18 +187,19 @@ describe("runValidate", () => {
   });
 });
 
-describe("runParse", () => {
+describe("Parse Invoice", () => {
   it("targets /v1/parse and returns the parsed invoice JSON", async () => {
     const parsed = {
+      format: "cii",
       invoice: {
         number: "INV-1",
       },
     };
-    const {
-      client, calls,
-    } = clientReturning(() => jsonResponse(parsed));
+    respondWith(() => jsonResponse(parsed));
 
-    const result = await runParse(client, {
+    const {
+      result, summary,
+    } = await runAction(parseInvoice, {
       inputSource: "text",
       documentText: "<Invoice/>",
       contentType: "auto",
@@ -160,16 +207,15 @@ describe("runParse", () => {
     });
 
     expect(result).toEqual(parsed);
+    expect(summary).toBe("Parsed CII invoice INV-1");
     expect(calls[0].url).toContain("/v1/parse?");
     expect(calls[0].url).toContain("format=cii");
   });
 });
 
-describe("runGenerate", () => {
+describe("Generate Invoice", () => {
   it("posts the invoice JSON, writes the XML to /tmp, and returns metadata", async () => {
-    const {
-      client, calls,
-    } = clientReturning(() => new Response("<Invoice>generated</Invoice>", {
+    respondWith(() => new Response("<Invoice>generated</Invoice>", {
       status: 200,
       headers: {
         "content-type": "application/xml",
@@ -177,7 +223,7 @@ describe("runGenerate", () => {
       },
     }));
 
-    const result = await runGenerate(client, {
+    const { result } = await runAction(generateInvoice, {
       standard: "xrechnung",
       output: "xml",
       invoice: {
@@ -207,7 +253,7 @@ describe("runGenerate", () => {
   });
 
   it("includes the Factur-X profile only for the hybrid family and writes a .pdf", async () => {
-    const { client } = clientReturning(() => new Response("%PDF-1.7 hybrid", {
+    respondWith(() => new Response("%PDF-1.7 hybrid", {
       status: 200,
       headers: {
         "content-type": "application/pdf",
@@ -215,7 +261,7 @@ describe("runGenerate", () => {
       },
     }));
 
-    const result = await runGenerate(client, {
+    const { result } = await runAction(generateInvoice, {
       standard: "zugferd",
       output: "pdf",
       facturxProfile: "extended",
@@ -231,16 +277,14 @@ describe("runGenerate", () => {
   });
 
   it("resolves the NLCIUS target to peppol-bis + the netherlands-nlcius profile", async () => {
-    const {
-      client, calls,
-    } = clientReturning(() => new Response("<Invoice/>", {
+    respondWith(() => new Response("<Invoice/>", {
       status: 200,
       headers: {
         "content-type": "application/xml",
       },
     }));
 
-    await runGenerate(client, {
+    await runAction(generateInvoice, {
       standard: "nlcius",
       output: "pdf",
       invoice: {
@@ -262,16 +306,14 @@ describe("runGenerate", () => {
   // them unless the request names a visual to render, so without `template` the
   // PDF choice is a 400 no prop value avoids.
   it("asks for the built-in visual when PDF is chosen and no stored template is given", async () => {
-    const {
-      client, calls,
-    } = clientReturning(() => new Response("%PDF-1.7 visual", {
+    respondWith(() => new Response("%PDF-1.7 visual", {
       status: 200,
       headers: {
         "content-type": "application/pdf",
       },
     }));
 
-    await runGenerate(client, {
+    await runAction(generateInvoice, {
       standard: "xrechnung",
       output: "pdf",
       invoice: {
@@ -289,16 +331,14 @@ describe("runGenerate", () => {
   // out for them too rather than being gated on a standard list the connector
   // would then have to keep in step with the API.
   it("asks for the built-in visual on the hybrid standards as well", async () => {
-    const {
-      client, calls,
-    } = clientReturning(() => new Response("%PDF-1.7 hybrid", {
+    respondWith(() => new Response("%PDF-1.7 hybrid", {
       status: 200,
       headers: {
         "content-type": "application/pdf",
       },
     }));
 
-    await runGenerate(client, {
+    await runAction(generateInvoice, {
       standard: "zugferd",
       output: "pdf",
       invoice: {
@@ -311,16 +351,14 @@ describe("runGenerate", () => {
   });
 
   it("prefers a stored template over the built-in visual", async () => {
-    const {
-      client, calls,
-    } = clientReturning(() => new Response("%PDF-1.7 visual", {
+    respondWith(() => new Response("%PDF-1.7 visual", {
       status: 200,
       headers: {
         "content-type": "application/pdf",
       },
     }));
 
-    await runGenerate(client, {
+    await runAction(generateInvoice, {
       standard: "xrechnung",
       output: "pdf",
       pdfTemplateId: "k3d-9mp",
@@ -336,17 +374,15 @@ describe("runGenerate", () => {
   });
 });
 
-describe("runGenerate profile and verify gating", () => {
+describe("Generate Invoice profile and verify gating", () => {
   async function generate(props) {
-    const {
-      client, calls,
-    } = clientReturning(() => new Response("<Invoice/>", {
+    respondWith(() => new Response("<Invoice/>", {
       status: 200,
       headers: {
         "content-type": "application/xml",
       },
     }));
-    await runGenerate(client, {
+    await runAction(generateInvoice, {
       output: "xml",
       invoice: {
         number: "INV-1",
@@ -401,11 +437,9 @@ describe("runGenerate profile and verify gating", () => {
   });
 });
 
-describe("runConvert", () => {
+describe("Convert Invoice", () => {
   it("passes the target format and writes the converted bytes to /tmp", async () => {
-    const {
-      client, calls,
-    } = clientReturning(() => new Response("<ubl>converted</ubl>", {
+    respondWith(() => new Response("<ubl>converted</ubl>", {
       status: 200,
       headers: {
         "content-type": "application/xml",
@@ -414,7 +448,7 @@ describe("runConvert", () => {
       },
     }));
 
-    const result = await runConvert(client, {
+    const { result } = await runAction(convertInvoice, {
       inputSource: "text",
       documentText: "<cii/>",
       contentType: "auto",
@@ -431,40 +465,166 @@ describe("runConvert", () => {
   });
 });
 
-describe("runCheckAccount", () => {
-  it("hits /v1/me and returns the account context", async () => {
+describe("Convert Invoice targets", () => {
+  function convertResponse() {
+    return new Response("<converted/>", {
+      status: 200,
+      headers: {
+        "content-type": "application/xml",
+      },
+    });
+  }
+
+  // The SDK does the gating; this pins what reaches the wire either way.
+  it("sends a target profile only to the Factur-X / ZUGFeRD family", async () => {
+    respondWith(convertResponse);
+    await runAction(convertInvoice, {
+      inputSource: "text",
+      documentText: "<cii/>",
+      targetFormat: "ubl",
+      targetProfile: "extended",
+    });
+    respondWith(convertResponse);
+    await runAction(convertInvoice, {
+      inputSource: "text",
+      documentText: "<ubl/>",
+      targetFormat: "facturx",
+      targetProfile: "extended",
+    });
+
+    expect(calls[0].url).not.toContain("extended");
+    expect(calls[1].url).toContain("extended");
+  });
+
+  it("writes the converted document under the Filename given", async () => {
+    respondWith(convertResponse);
+
+    const { result } = await runAction(convertInvoice, {
+      inputSource: "text",
+      documentText: "<cii/>",
+      targetFormat: "ubl",
+      filename: "INV-7-ubl.xml",
+    });
+
+    expect(result.filename).toBe("INV-7-ubl.xml");
+    expect(await fsp.readFile(result.path, "utf8")).toBe("<converted/>");
+  });
+});
+
+describe("Check Account", () => {
+  it("hits /v1/me with the connected key and returns the account context", async () => {
     const account = {
       plan: "free",
       quota: {
         limit: 50,
       },
     };
-    const {
-      client, calls,
-    } = clientReturning(() => jsonResponse(account));
+    respondWith(() => jsonResponse(account));
 
-    const result = await runCheckAccount(client);
+    const {
+      result, summary,
+    } = await runAction(checkAccount, {}, "abc");
 
     expect(calls[0].url).toBe("https://api.beliq.eu/v1/me");
+    expect(calls[0].headers.get("x-api-key")).toBe("abc");
     expect(result).toEqual({
       success: true,
       account,
     });
+    expect(summary).toBe("beliq API key is valid");
+  });
+});
+
+describe("error details", () => {
+  it("names the failing rules of a 422 INVALID_INVOICE, five at most", async () => {
+    const errors = [
+      "BR-DE-1",
+      "BR-DE-2",
+      "BR-DE-15",
+      "BR-CO-13",
+      "BR-CO-15",
+      "BR-S-01",
+      "BR-S-08",
+    ].map((ruleId) => ({
+      ruleId,
+      message: `${ruleId} failed`,
+      location: "/Invoice",
+    }));
+    respondWith(() => errorResponse("INVALID_INVOICE", "Generated invoice failed validation", 422, {
+      validationResult: {
+        valid: false,
+        errors,
+      },
+    }));
+
+    const failure = runAction(generateInvoice, {
+      standard: "xrechnung",
+      output: "xml",
+      invoice: {
+        number: "INV-1",
+      },
+    });
+
+    await expect(failure).rejects.toThrow("Generated invoice failed validation: BR-DE-1 BR-DE-1 failed at /Invoice; ");
+    await expect(failure).rejects.toThrow("BR-CO-15 BR-CO-15 failed at /Invoice (+2 more) (INVALID_INVOICE)");
+  });
+
+  it("names the fields of a 400 VALIDATION_ERROR", async () => {
+    respondWith(() => errorResponse("VALIDATION_ERROR", "body/invoice must have required property 'number'", 400, {
+      fields: [
+        {
+          path: "/invoice",
+          message: "must have required property 'number'",
+          keyword: "required",
+        },
+      ],
+    }));
+
+    await expect(runAction(generateInvoice, {
+      standard: "xrechnung",
+      output: "xml",
+      invoice: {
+        issueDate: "2026-01-15",
+      },
+    })).rejects.toThrow(": /invoice must have required property 'number' (VALIDATION_ERROR)");
+  });
+
+  it("names the paths a fail-closed conversion could not carry", async () => {
+    respondWith(() => errorResponse("CONVERSION_LOSSY_FAILCLOSED", "UBL has no equivalent extension", 422, {
+      unmappablePaths: [
+        "/rsm:CrossIndustryInvoice/rsm:ExchangedDocumentContext/ram:BusinessProcessSpecifiedDocumentContextParameter",
+      ],
+    }));
+
+    await expect(runAction(convertInvoice, {
+      inputSource: "text",
+      documentText: "<cii/>",
+      targetFormat: "ubl",
+    })).rejects.toThrow("extension: /rsm:CrossIndustryInvoice/rsm:ExchangedDocumentContext/ram:BusinessProcessSpecifiedDocumentContextParameter (CONVERSION_LOSSY_FAILCLOSED)");
+  });
+
+  it("passes a plain Error through unchanged", () => {
+    const e = new Error("boom");
+    expect(mapError(e)).toBe(e);
   });
 });
 
 describe("resolveDocument", () => {
-  it("rejects empty pasted text", async () => {
-    await expect(resolveDocument({
+  it("rejects empty pasted text as a configuration error", async () => {
+    const failure = resolveDocument({
       inputSource: "text",
       documentText: "   ",
-    })).rejects.toThrow(/Paste the invoice XML/);
+    });
+    await expect(failure).rejects.toThrow(ConfigurationError);
+    await expect(failure).rejects.toThrow(/Paste the invoice XML/);
   });
 
-  it("rejects a file input with no path", async () => {
-    await expect(resolveDocument({
+  it("rejects a file input with no path as a configuration error", async () => {
+    const failure = resolveDocument({
       inputSource: "file",
-    })).rejects.toThrow(/Provide a file path or URL/);
+    });
+    await expect(failure).rejects.toThrow(ConfigurationError);
+    await expect(failure).rejects.toThrow(/Provide a file path or URL/);
   });
 
   it("reads bytes from a real file path", async () => {
@@ -483,28 +643,42 @@ describe("resolveDocument", () => {
     expect(Buffer.from(bytes).toString("utf8")).toBe("<ubl/>");
     expect(contentType).toBeUndefined();
   });
-});
 
-describe("createClient", () => {
-  it("builds a client that targets api.beliq.eu with the connected key", async () => {
-    const calls = [];
-    const fetchImpl = async (url, init) => {
-      calls.push({
-        url: String(url),
-        headers: new Headers(init?.headers),
+  it("names a file path that does not exist", async () => {
+    await expect(resolveDocument({
+      inputSource: "file",
+      filePath: "/tmp/beliq-pd-no-such-file.xml",
+    })).rejects.toThrow("File not found: /tmp/beliq-pd-no-such-file.xml");
+  });
+
+  it("downloads a document from a URL", async () => {
+    const server = http.createServer((req, res) => {
+      if (req.url === "/invoice.xml") {
+        res.writeHead(200, {
+          "content-type": "application/xml",
+        });
+        res.end("<Invoice>from a url</Invoice>");
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+      const { bytes } = await resolveDocument({
+        inputSource: "file",
+        filePath: `${base}/invoice.xml`,
       });
-      return jsonResponse({
-        plan: "free",
-      });
-    };
-    const client = createClient({
-      api_key: "abc",
-    }, fetchImpl);
+      expect(Buffer.from(bytes).toString("utf8")).toBe("<Invoice>from a url</Invoice>");
 
-    await client.me();
-
-    expect(calls[0].url).toBe("https://api.beliq.eu/v1/me");
-    expect(calls[0].headers.get("x-api-key")).toBe("abc");
+      await expect(resolveDocument({
+        inputSource: "file",
+        filePath: `${base}/missing.xml`,
+      })).rejects.toThrow(/404/);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
   });
 });
 
@@ -523,18 +697,30 @@ describe("option lists", () => {
   });
 });
 
-describe("asJsonObject / mapError", () => {
+describe("parseObject", () => {
   it("parses a JSON string and drops empty objects", () => {
-    expect(asJsonObject("{\"a\":1}")).toEqual({
+    expect(parseObject("{\"a\":1}", "Advanced (JSON)")).toEqual({
       a: 1,
     });
-    expect(asJsonObject("{}")).toBeUndefined();
-    expect(asJsonObject("")).toBeUndefined();
-    expect(asJsonObject("not json")).toBeUndefined();
+    expect(parseObject("{}", "Advanced (JSON)")).toBeUndefined();
+    expect(parseObject("", "Advanced (JSON)")).toBeUndefined();
+    expect(parseObject(undefined, "Advanced (JSON)")).toBeUndefined();
   });
 
-  it("passes a plain Error through unchanged", () => {
-    const e = new Error("boom");
-    expect(mapError(e)).toBe(e);
+  it("rejects text that is not a JSON object, naming the field", () => {
+    expect(() => parseObject("not json", "Advanced (JSON)")).toThrow(ConfigurationError);
+    expect(() => parseObject("not json", "Advanced (JSON)")).toThrow(/^Advanced \(JSON\) is not valid JSON/);
+    expect(() => parseObject("[1, 2]", "Invoice")).toThrow("Invoice must be a JSON object, not an array.");
+  });
+
+  it("stops Generate before any request when the invoice is malformed", async () => {
+    // Before, a malformed string became `{}` and the API answered with a
+    // schema error about fields the user had in fact typed.
+    await expect(runAction(generateInvoice, {
+      standard: "xrechnung",
+      output: "xml",
+      invoice: "{ \"number\": \"INV-1\", }",
+    })).rejects.toThrow(/^Invoice is not valid JSON/);
+    expect(calls).toHaveLength(0);
   });
 });

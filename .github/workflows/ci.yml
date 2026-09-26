@@ -33,10 +33,16 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # No key here, so the live tests skip, but the file still loads and its
+      # wiring test runs: a live suite importing something a PR renamed fails
+      # on the PR instead of on the next push to main.
+      - name: Live smoke wiring (no API calls)
+        run: npm run test:integration
+
       - name: Scrub check (no em-dash)
         run: npm run scrub:check
 
-  # test:integration drives the same run functions the actions call against the live beliq API, spending 2 documents (generate + validate; check-account is quota-exempt).
+  # test:integration runs the shipped actions through the app methods against the live beliq API, spending 2 documents (generate + validate; check-account is quota-exempt).
   # BELIQ_API_KEY is a `blq_test_` sandbox key: it runs the full rule stack but
   # draws on the sandbox allowance instead of the plan quota, so a broad trigger
   # stays affordable.
