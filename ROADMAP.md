@@ -1,6 +1,6 @@
 # pipedream-beliq roadmap
 
-`status: in progress: registry PR https://github.com/PipedreamHQ/pipedream/pull/22073 open and waiting for Pipedream to provision the beliq app; next: on or after 2026-10-01 merge #25, then #26, and confirm main's live job`
+`status: in progress: registry PR https://github.com/PipedreamHQ/pipedream/pull/22073 open, with no maintainer review and no beliq app provisioned as of 2026-10-01; next: once https://pipedream.com/apps/beliq exists, merge master into add-beliq-app keeping our files, adopt the scaffold's $auth names and slug, and run the five actions in a real workflow`
 
 beliq connector for Pipedream (portfolio item D6.2 in
 `~/Projects/beliq/beliq-hq/CONNECTORS-ROADMAP.md`). The component lives under
@@ -85,15 +85,15 @@ line (read from the merged PR list and `git log` on 2026-09-24, `main` at
 - [x] vitest 4 (security update):
   https://github.com/beliq-eu/pipedream-beliq/pull/19
 
-## In progress: registry pre-flight
+## Done: registry pre-flight
 
-https://github.com/beliq-eu/pipedream-beliq/pull/26 (branch `registry-preflight`,
-cut from #25's `item-8f`, base `main`). CI green. **Held until 2026-10-01 and
-merged after #25**, for the same reason as #25: every push to `main` runs the
-`live` job and the shared sandbox allowance resets 2026-10-01T00:00Z.
-`~/Projects/beliq/land-connectors-8f.sh` merges #25 but does not know about #26,
-so #26 is merged by hand after it. The two share #25's ROADMAP/README hunks
-verbatim, so #26 merges cleanly once #25 is squash-merged.
+https://github.com/beliq-eu/pipedream-beliq/pull/26 (branch `registry-preflight`),
+squash-merged to `main` as `efa83df` on 2026-09-26 at 04:35 CEST, five minutes
+after https://github.com/beliq-eu/pipedream-beliq/pull/25 (`756c396`, the
+roadmap and README update #26 was cut from). Both had been planned for
+2026-10-01, on the assumption that the shared sandbox allowance was spent until
+its reset at 2026-10-01T00:00Z. It was not: the `preflight` job read 324
+documents remaining on #25's merge and 322 on #26's, so both `live` jobs ran.
 
 Why: Pipedream tightened its CodeRabbit rules after PolyDoc merged
 (https://github.com/PipedreamHQ/pipedream/pull/22006 on 2026-09-22 and
@@ -129,8 +129,10 @@ component failed several. What #26 changes:
   sample moved to `common/constants.mjs` and is rendered into the description
   as a JSON block, pinned byte for byte to the sample the GS1, CIUS and live
   checks run on. PolyDoc's merged `invoice` prop has no default either.
-- [ ] Merge on or after 2026-10-01, after #25; confirm `main`'s `live` job
-  reports 2 passed (not skipped).
+- [x] Merged 2026-09-26, after #25. `main`'s `live` job at `efa83df`
+  (https://github.com/beliq-eu/pipedream-beliq/actions/runs/36212148869)
+  reports 3 passed and none skipped: the 2 live tests and the wiring test #26
+  added.
 
 ## Verified
 
@@ -150,14 +152,19 @@ CodeRabbit fix:
   parties, and that it carries the fields the XRechnung CIUS requires (BR-DE-1,
   BR-DE-2, BR-DE-15, BR-CO-13, BR-CO-15, BR-CO-18, BR-S-01). The `test` job of
   PR #26's CI run
-  https://github.com/beliq-eu/pipedream-beliq/actions/runs/36071480037 passes.
+  https://github.com/beliq-eu/pipedream-beliq/actions/runs/36071480037 passes,
+  and the `test` job on `main` at `efa83df`
+  (https://github.com/beliq-eu/pipedream-beliq/actions/runs/36212148869)
+  reports the same 75 passed.
 - `npm run test:integration`: without a key, 1 wiring test passes and the 2 live
   tests skip. The wiring test exists because vitest turns an import of a missing
   named export into `undefined`, so a skipped live suite never noticed one
   (planted and confirmed). Not run with a key in this re-run, since it spends
   sandbox documents; the last `main` live job before #26
   (https://github.com/beliq-eu/pipedream-beliq/actions/runs/35747805951, at
-  `6a7d516`) reports 2 passed.
+  `6a7d516`) reports 2 passed. With the key, the `live` job on `main` at
+  `efa83df` (run 36212148869, linked above) reports 3 passed: the wiring test
+  and the 2 live tests.
 - `npm run lint`: 0 errors, 5 advisory `default-value` warnings (genuinely
   optional props with no sensible default).
 - `npm run scrub:check`: no em-dash.
@@ -168,8 +175,8 @@ CodeRabbit fix:
   default branch `main`, committed as `beliq <hello@beliq.eu>`, pushed 2026-07-01
   with a pinned `beliq-eu` token; active gh account stayed `tobias-dev`).
 - [x] App-integration request filed 2026-09-15:
-  https://github.com/PipedreamHQ/pipedream/issues/21996. No labels, comments or
-  assignee by 2026-09-25.
+  https://github.com/PipedreamHQ/pipedream/issues/21996. No labels, assignee or
+  reply by 2026-10-01; its one comment is our link to the registry PR.
 - [x] **Decision 2026-09-25: stop waiting on #21996 and open the registry PR.**
   The PR template's "request the app first" line dates from 2026-04-29, and
   PolyDoc opened https://github.com/PipedreamHQ/pipedream/pull/21180 directly
@@ -181,7 +188,9 @@ CodeRabbit fix:
   https://github.com/beliq-eu/pipedream branch `add-beliq-app` (commit
   `c173c422`, committed as `beliq <hello@beliq.eu>`), linked from #21996.
   `components/beliq` there is byte-identical to this repo's `components/beliq`
-  at `8736527` (tree `6878407`). The body flags the app auth Pipedream must
+  at `8736527` (tree `6878407`). After the CodeRabbit fixes the two still match:
+  on 2026-10-01 the PR head `0226015f` and `main` at `efa83df` both carry tree
+  `825654f`. The body flags the app auth Pipedream must
   provision (one `api_key` secret field; `GET https://api.beliq.eu/v1/me` as the
   free connect test), explains the SDK instead of platform axios (precedent:
   the `stripe` and `openai` components), and names the one open check (the SDK
@@ -205,6 +214,7 @@ CodeRabbit fix:
   Check` had run (pass); `Pull Request Checks` and `Components Checks` report
   `action_required`, because a maintainer must approve workflow runs for a
   first-time fork contributor. Nothing to do on our side until they approve.
+  Unchanged on 2026-10-01, on head `0226015f`.
 - [x] CodeRabbit's first pass on #22073 (2026-09-25): 1 actionable finding, the
   Invoice default, fixed in both `registry-preflight` (#26) and `add-beliq-app`
   and answered on the thread without marking it resolved (the PR template asks
@@ -232,9 +242,14 @@ CodeRabbit fix:
   rules and BR-DE-1 (`paymentMeans`). CodeRabbit re-checked and withdrew the
   finding. State on 2026-09-25: 7 of 7 threads resolved, automatic reviews
   paused on head `0226015f`. Later CodeRabbit passes, and any maintainer review,
-  get the same treatment.
+  get the same treatment. Re-checked 2026-10-01: no comment, review or thread
+  since 2026-09-25 02:42 CEST. The reviewer Pipedream's bot requested when the
+  PR opened (`michelle0927`) has not reviewed yet. The branch is 20 commits
+  behind `master` and has no conflict.
 - [ ] Pipedream provisions the `beliq` app (`https://pipedream.com/apps/beliq`
-  answered 404 on 2026-09-25).
+  answered 404 on 2026-09-25 and again on 2026-10-01, when `master` also had no
+  `components/beliq`). For scale: PolyDoc's app was provisioned 7 days after its
+  PR opened, and 2026-10-01 is day 7 for #22073.
 - [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
   #21180 shows `polydoc.app.mjs` (+296 -4) and `package.json` (+5 -2) as
   modified, so the maintainer's scaffold landed on `master` first. Merge
@@ -248,7 +263,9 @@ CodeRabbit fix:
   live job: https://github.com/beliq-eu/pipedream-beliq/actions/runs/34070006074
   (2026-09-07); latest checked:
   https://github.com/beliq-eu/pipedream-beliq/actions/runs/35747805951
-  (2026-09-22, at `6a7d516`). Both report 2 passed, not skipped.
+  (2026-09-22, at `6a7d516`). Both report 2 passed, not skipped. After #26:
+  https://github.com/beliq-eu/pipedream-beliq/actions/runs/36212148869
+  (2026-09-26, at `efa83df`) reports 3 passed, not skipped.
 - [ ] Install in a real Pipedream workflow, connect an account, run the five
   actions, and capture screenshots.
 
@@ -277,6 +294,10 @@ CodeRabbit fix:
   CodeRabbit read the short page and concluded the other two are optional. xs;
   a fix for the beliq-docs repo, blocks nothing here.
 
+- Renovate's vitest 5 major update,
+  https://github.com/beliq-eu/pipedream-beliq/pull/27, open since 2026-09-28
+  with `test` green. A major is not auto-merged, so it needs a read of the
+  vitest 5 migration notes and a merge. s, blocks nothing.
 - Four stale remote branches on `beliq-eu/pipedream-beliq`:
   `canonical-invoice-fixture`, `eslint-flat-config`, `status-convention-pass-6`,
   `track-lockfile-npm-ci`. Check each one's PR is merged, then delete it. Repo
