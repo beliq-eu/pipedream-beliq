@@ -250,6 +250,13 @@ CodeRabbit fix:
   answered 404 on 2026-09-25 and again on 2026-10-01, when `master` also had no
   `components/beliq`). For scale: PolyDoc's app was provisioned 7 days after its
   PR opened, and 2026-10-01 is day 7 for #22073.
+- [x] **Decision 2026-10-01: wait, do not nudge the maintainers yet.** The two
+  options were to keep waiting, or to comment on #22073 asking the requested
+  reviewer (`michelle0927`) to approve the workflow runs and provision the app.
+  Waiting was chosen: PolyDoc's #21180 was provisioned on day 7 and merged on
+  day 10 without a nudge, and a ping on a 7-day-old PR can read as pushy. Ask
+  again if nothing has moved by 2026-10-08 (day 14). A comment on the Pipedream
+  PR needs the operator's yes either way.
 - [ ] After provisioning, expect a conflict on `components/beliq/`: PolyDoc's
   #21180 shows `polydoc.app.mjs` (+296 -4) and `package.json` (+5 -2) as
   modified, so the maintainer's scaffold landed on `master` first. Merge
