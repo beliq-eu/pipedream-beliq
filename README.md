@@ -1,7 +1,7 @@
 # beliq connector for Pipedream
 
 Generate, validate, parse, and convert EU-compliant e-invoices from a Pipedream
-workflow. beliq checks documents against authority-pinned, nightly-drift-checked
+workflow. [beliq](https://beliq.eu) checks documents against authority-pinned, nightly-drift-checked
 rules (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, EN 16931).
 
 This repository is the source of truth for the `beliq` component in the
