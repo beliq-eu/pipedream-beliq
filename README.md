@@ -59,7 +59,8 @@ npm install
 npm test            # offline tests: the real actions, app methods and SDK
                     # client, with only global fetch doubled; plus the
                     # registry review rules (test/registry-rules.test.mjs)
-npm run lint        # Pipedream component lint plus the registry's formatting rules
+npm run lint        # Pipedream component lint, the registry's formatting
+                    # rules and the size and complexity caps
 npm run scrub:check # fail on a stray em-dash
 ```
 
