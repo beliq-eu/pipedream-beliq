@@ -302,9 +302,9 @@ describe("Generate Invoice", () => {
     expect(sentBody.template).toBeUndefined();
   });
 
-  // XRechnung and Peppol BIS have no hybrid PDF. The API refuses PDF output for
-  // them unless the request names a visual to render, so without `template` the
-  // PDF choice is a 400 no prop value avoids.
+  // Only Factur-X and ZUGFeRD have a hybrid PDF. The API refuses PDF output for
+  // every other standard unless the request names a visual to render, so without
+  // `template` the PDF choice is a 400 no prop value avoids.
   it("asks for the built-in visual when PDF is chosen and no stored template is given", async () => {
     respondWith(() => new Response("%PDF-1.7 visual", {
       status: 200,
@@ -325,6 +325,38 @@ describe("Generate Invoice", () => {
     const sentBody = JSON.parse(bodyText(calls[0].body));
     expect(sentBody.output).toBe("pdf");
     expect(sentBody.template).toBe("standard");
+  });
+
+  // The national standards are XML-only too, and a Factur-X profile left over
+  // from an earlier pick must not reach a standard that takes none.
+  it.each([
+    "fatturapa",
+    "facturae",
+    "eslog",
+    "ksef",
+  ])("sends %s as itself, with the built-in visual and no Factur-X profile", async (standard) => {
+    respondWith(() => new Response("%PDF-1.7 visual", {
+      status: 200,
+      headers: {
+        "content-type": "application/pdf",
+      },
+    }));
+
+    await runAction(generateInvoice, {
+      standard,
+      output: "pdf",
+      facturxProfile: "en16931",
+      invoice: {
+        number: "INV-5",
+      },
+      verify: false,
+    });
+
+    const sentBody = JSON.parse(bodyText(calls[0].body));
+    expect(sentBody.standard).toBe(standard);
+    expect(sentBody.template).toBe("standard");
+    expect(sentBody.facturxProfile).toBeUndefined();
+    expect(sentBody.profile).toBeUndefined();
   });
 
   // Factur-X and ZUGFeRD render their page either way, so the same field goes
@@ -689,11 +721,21 @@ describe("option lists", () => {
       "zugferd",
       "facturx",
       "peppol-bis",
+      "fatturapa",
+      "facturae",
+      "eslog",
+      "ksef",
       "nlcius",
     ]);
     expect(VALIDATE_FORMAT_OPTIONS.map((o) => o.value)).toContain("auto");
     // A convert target can never be auto-detected.
     expect(CONVERT_TARGET_OPTIONS.map((o) => o.value)).not.toContain("auto");
+  });
+
+  // A value with no label shows in the dropdown as its raw id. The SDK decides
+  // which standards are offered, so a new one arrives here without a label.
+  it("gives every generate target a label of its own", () => {
+    expect(STANDARD_OPTIONS.filter((o) => o.label === o.value)).toEqual([]);
   });
 });
 
