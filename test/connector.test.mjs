@@ -13,9 +13,7 @@ import convertInvoice from "../components/beliq/actions/convert-invoice/convert-
 import checkAccount from "../components/beliq/actions/check-account/check-account.mjs";
 import { mapError } from "../components/beliq/common/errors.mjs";
 import { resolveDocument } from "../components/beliq/common/io.mjs";
-import {
-  parseObject, resolveGenerateTarget, usableFacturxProfile,
-} from "../components/beliq/common/utils.mjs";
+import { parseObject } from "../components/beliq/common/utils.mjs";
 import {
   CONVERT_TARGET_OPTIONS,
   STANDARD_OPTIONS,
@@ -327,6 +325,38 @@ describe("Generate Invoice", () => {
     const sentBody = JSON.parse(bodyText(calls[0].body));
     expect(sentBody.output).toBe("pdf");
     expect(sentBody.template).toBe("standard");
+  });
+
+  // The national standards are XML-only too, and a Factur-X profile left over
+  // from an earlier pick must not reach a standard that takes none.
+  it.each([
+    "fatturapa",
+    "facturae",
+    "eslog",
+    "ksef",
+  ])("sends %s as itself, with the built-in visual and no Factur-X profile", async (standard) => {
+    respondWith(() => new Response("%PDF-1.7 visual", {
+      status: 200,
+      headers: {
+        "content-type": "application/pdf",
+      },
+    }));
+
+    await runAction(generateInvoice, {
+      standard,
+      output: "pdf",
+      facturxProfile: "en16931",
+      invoice: {
+        number: "INV-5",
+      },
+      verify: false,
+    });
+
+    const sentBody = JSON.parse(bodyText(calls[0].body));
+    expect(sentBody.standard).toBe(standard);
+    expect(sentBody.template).toBe("standard");
+    expect(sentBody.facturxProfile).toBeUndefined();
+    expect(sentBody.profile).toBeUndefined();
   });
 
   // Factur-X and ZUGFeRD render their page either way, so the same field goes
@@ -706,20 +736,6 @@ describe("option lists", () => {
   // which standards are offered, so a new one arrives here without a label.
   it("gives every generate target a label of its own", () => {
     expect(STANDARD_OPTIONS.filter((o) => o.label === o.value)).toEqual([]);
-  });
-
-  it("resolves each national standard to itself, with no Factur-X profile to use", () => {
-    for (const standard of [
-      "fatturapa",
-      "facturae",
-      "eslog",
-      "ksef",
-    ]) {
-      expect(resolveGenerateTarget(standard)).toEqual({
-        standard,
-      });
-      expect(usableFacturxProfile(standard, "en16931")).toBeUndefined();
-    }
   });
 });
 
