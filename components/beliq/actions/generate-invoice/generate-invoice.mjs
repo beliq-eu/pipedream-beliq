@@ -7,7 +7,7 @@ import {
 export default {
   key: "beliq-generate-invoice",
   name: "Generate Invoice",
-  description: "Create a standard-compliant e-invoice from a JSON invoice object and write it to `/tmp`: XML (XRechnung, ZUGFeRD, Factur-X, Peppol BIS) or a PDF (a hybrid PDF/A-3 on Factur-X and ZUGFeRD). Use it when you have invoice data, e.g. from a CRM, shop or spreadsheet row, and need a file to send or archive. Returns the file's `path`, and with XML output the `xml` text too; pass the `path` to **Validate Invoice** or **Convert Invoice**. With Validate Result on (the default), an invoice that breaks a rule fails with the rule IDs instead of returning a non-compliant document. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/generate/)",
+  description: "Create a standard-compliant e-invoice from a JSON invoice object and write it to `/tmp`: XML (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, and the Schema-checked FatturaPA, Facturae, e-SLOG and KSeF FA(3)) or a PDF (a hybrid PDF/A-3 on Factur-X and ZUGFeRD, a visualization on the others). Use it when you have invoice data, e.g. from a CRM, shop or spreadsheet row, and need a file to send or archive. Returns the file's `path`, and with XML output the `xml` text too; pass the `path` to **Validate Invoice** or **Convert Invoice**. With Validate Result on (the default), an invoice that breaks a rule fails with the rule IDs instead of returning a non-compliant document. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/generate/)",
   version: "0.0.1",
   type: "action",
   ai: "optimized",
@@ -92,9 +92,9 @@ export default {
     if (pdfTemplateId) {
       input.pdfTemplateId = pdfTemplateId;
     } else if (input.output === "pdf") {
-      // XRechnung and Peppol BIS have no hybrid PDF, and the API refuses PDF for
-      // them unless the request names a visual to render. Factur-X and ZUGFeRD
-      // render theirs either way, so this is inert for them.
+      // Only Factur-X and ZUGFeRD have a hybrid PDF. The API refuses PDF for
+      // every other standard unless the request names a visual to render.
+      // Factur-X and ZUGFeRD render theirs either way, so this is inert for them.
       input.template = "standard";
     }
 

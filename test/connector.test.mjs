@@ -13,7 +13,9 @@ import convertInvoice from "../components/beliq/actions/convert-invoice/convert-
 import checkAccount from "../components/beliq/actions/check-account/check-account.mjs";
 import { mapError } from "../components/beliq/common/errors.mjs";
 import { resolveDocument } from "../components/beliq/common/io.mjs";
-import { parseObject } from "../components/beliq/common/utils.mjs";
+import {
+  parseObject, resolveGenerateTarget, usableFacturxProfile,
+} from "../components/beliq/common/utils.mjs";
 import {
   CONVERT_TARGET_OPTIONS,
   STANDARD_OPTIONS,
@@ -302,9 +304,9 @@ describe("Generate Invoice", () => {
     expect(sentBody.template).toBeUndefined();
   });
 
-  // XRechnung and Peppol BIS have no hybrid PDF. The API refuses PDF output for
-  // them unless the request names a visual to render, so without `template` the
-  // PDF choice is a 400 no prop value avoids.
+  // Only Factur-X and ZUGFeRD have a hybrid PDF. The API refuses PDF output for
+  // every other standard unless the request names a visual to render, so without
+  // `template` the PDF choice is a 400 no prop value avoids.
   it("asks for the built-in visual when PDF is chosen and no stored template is given", async () => {
     respondWith(() => new Response("%PDF-1.7 visual", {
       status: 200,
@@ -689,11 +691,35 @@ describe("option lists", () => {
       "zugferd",
       "facturx",
       "peppol-bis",
+      "fatturapa",
+      "facturae",
+      "eslog",
+      "ksef",
       "nlcius",
     ]);
     expect(VALIDATE_FORMAT_OPTIONS.map((o) => o.value)).toContain("auto");
     // A convert target can never be auto-detected.
     expect(CONVERT_TARGET_OPTIONS.map((o) => o.value)).not.toContain("auto");
+  });
+
+  // A value with no label shows in the dropdown as its raw id. The SDK decides
+  // which standards are offered, so a new one arrives here without a label.
+  it("gives every generate target a label of its own", () => {
+    expect(STANDARD_OPTIONS.filter((o) => o.label === o.value)).toEqual([]);
+  });
+
+  it("resolves each national standard to itself, with no Factur-X profile to use", () => {
+    for (const standard of [
+      "fatturapa",
+      "facturae",
+      "eslog",
+      "ksef",
+    ]) {
+      expect(resolveGenerateTarget(standard)).toEqual({
+        standard,
+      });
+      expect(usableFacturxProfile(standard, "en16931")).toBeUndefined();
+    }
   });
 });
 

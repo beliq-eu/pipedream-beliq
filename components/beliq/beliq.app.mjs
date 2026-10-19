@@ -20,14 +20,14 @@ export default {
     standard: {
       type: "string",
       label: "Standard",
-      description: "The e-invoice standard to produce, e.g. `xrechnung` for a German public-sector buyer or `facturx` for a French or German hybrid PDF. The NLCIUS option is Peppol BIS with the Dutch `netherlands-nlcius` profile.",
+      description: "The e-invoice standard to produce, e.g. `xrechnung` for a German public-sector buyer or `facturx` for a French or German hybrid PDF. The NLCIUS option is Peppol BIS with the Dutch `netherlands-nlcius` profile. FatturaPA (`fatturapa`), Facturae (`facturae`), e-SLOG (`eslog`) and KSeF FA(3) (`ksef`) are Schema-checked: structure only, no business rules. KSeF FA(3) covers ordinary VAT invoices in PLN between Polish parties, at VAT rates 23, 22, 8, 7 and 5; [the Poland reference](https://docs.beliq.eu/format-reference/poland/) states the full scope. beliq does not operate KSeF submission.",
       options: STANDARD_OPTIONS,
       default: "xrechnung",
     },
     output: {
       type: "string",
       label: "Output",
-      description: "The document kind to return, e.g. `xml`. `xml` is a pure e-invoice. `pdf` gives a hybrid PDF/A-3 with the XML embedded on Factur-X and ZUGFeRD; XRechnung and Peppol BIS have no hybrid form, so they return a visualization with no XML inside it and their legal document stays the XML.",
+      description: "The document kind to return, e.g. `xml`. `xml` is a pure e-invoice. `pdf` gives a hybrid PDF/A-3 with the XML embedded on Factur-X and ZUGFeRD. No other standard has a hybrid form, so each returns a visualization with no XML inside it and its legal document stays the XML.",
       options: OUTPUT_OPTIONS,
       default: "xml",
     },
