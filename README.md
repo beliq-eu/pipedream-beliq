@@ -2,7 +2,9 @@
 
 Generate, validate, parse, and convert EU-compliant e-invoices from a Pipedream
 workflow. [beliq](https://beliq.eu) checks documents against authority-pinned, nightly-drift-checked
-rules (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, EN 16931).
+rules (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, EN 16931). It also generates
+FatturaPA, Facturae, e-SLOG and KSeF FA(3), which are Schema-checked: see
+[Format coverage](#format-coverage).
 
 This repository is the source of truth for the `beliq` component in the
 [Pipedream registry](https://github.com/PipedreamHQ/pipedream). It is not an npm
@@ -47,9 +49,9 @@ Connect a beliq account with an API key from the
 
 ## Format coverage
 
-The format dropdowns come straight from the SDK's lists, so they cannot drift
-from what the API accepts. The Standard dropdown of **Generate Invoice** carries
-every standard `POST /v1/generate` accepts, plus the NLCIUS profile of Peppol BIS.
+The format dropdowns come straight from the SDK's lists. The Standard dropdown
+of **Generate Invoice** carries every standard `POST /v1/generate` accepts, plus
+the NLCIUS profile of Peppol BIS.
 `GET https://api.beliq.eu/v1/rulesets` publishes each format with a badge saying
 how deep its check goes:
 
@@ -76,7 +78,7 @@ legal document is the XML. NLCIUS always returns XML.
 The **Convert Invoice** dropdowns are shorter than the Generate one because the
 API's own convert enums are: no national format is a conversion source or target.
 
-The connector generates and validates the document. Transmission (Peppol, PDP,
+The connector generates and validates the document. Transmission (Peppol, PA,
 KSeF, SDI), filing and reporting stay with your access point: beliq does not
 operate KSeF submission, and no action of this component sends or files an
 invoice.
