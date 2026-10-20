@@ -20,6 +20,6 @@
     "@pipedream/platform": "^3.4.0",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
-    "vitest": "^4.0.0"
+    "vitest": "^5.0.0"
   }
 }
