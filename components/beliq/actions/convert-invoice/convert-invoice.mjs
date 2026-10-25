@@ -9,7 +9,7 @@ export default {
   key: "beliq-convert-invoice",
   name: "Convert Invoice",
   description: "Convert an e-invoice from one format to another, e.g. a Factur-X PDF to UBL or a CII XRechnung to Peppol BIS, and write the result to `/tmp`. Use it when a recipient or network needs a different format than the one you have. Returns the file's `path` plus `lostElements`, the fields the target format could not carry. An XML source converted to Factur-X or ZUGFeRD comes back as CII XML; a PDF comes back only when a hybrid PDF source is converted to one of them, and then `pdfNote` says what that PDF is. Check the result with **Validate Invoice**. A conversion that would silently drop a French CTC code fails unless Drop France CTC Overlay is on. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/convert/)",
-  version: "0.0.2",
+  version: "0.1.0",
   type: "action",
   ai: "optimized",
   annotations: {

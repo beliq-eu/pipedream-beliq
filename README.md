@@ -2,10 +2,9 @@
 
 Validate, generate, convert and parse EU e-invoices with the
 [beliq](https://beliq.eu) API from a Pipedream workflow. Every verdict carries the
-check depth the API states for it, or says that none was stated:
+check depth the API states for it, or says that none was stated.
 [How verification works](https://docs.beliq.eu/compliance/how-verification-works/)
-explains each depth, and [Format coverage](#format-coverage) says where to read
-each format's.
+explains each depth.
 
 This repository is the source of truth for the `beliq` component in the
 [Pipedream registry](https://github.com/PipedreamHQ/pipedream). It is not an npm
@@ -63,11 +62,14 @@ and schemas beliq lists for its format, in the stated versions. It does not mean
 every recipient, validation tool or tax authority accepts it.
 
 The step summary words the verdict as `VALID` or `INVALID` with the check depth
-beside it, or `check depth not stated`. A France CTC block
+beside it, or `check depth not stated`, and the error count. A France CTC block
 (`franceCtcBlockingRuleIds`) ends a transmission even where `valid` is true, so
-the summary names it first and counts the document as failed. Generate's
-summary does the same for the verdict on the document it produced, and with
-Validate Result off says the document was not validated.
+the summary leads with the number of blocking rules and counts the document as
+failed. The API's own message for the block stays in the result's `warnings`.
+Generate's summary does the same for the verdict on the document it produced.
+With Validate Result off nothing is checked: `validationResult.verified` is
+`false`, `valid` is then `false` because nothing looked, not because the
+document failed, and the summary says `NOT VALIDATED`.
 
 ## Format coverage
 
@@ -75,8 +77,10 @@ The format dropdowns come straight from the SDK's lists. The Standard dropdown
 of **Generate Invoice** carries every standard `POST /v1/generate` accepts, plus
 the NLCIUS profile of Peppol BIS. How deep beliq checks a format differs by
 format. [`GET https://api.beliq.eu/v1/rulesets`](https://docs.beliq.eu/api-reference/rulesets/),
-which needs no API key, publishes each format with its rule pack, the version in
-force and its badge.
+which needs no API key, lists each format beliq offers with its rule pack, the
+version in force and its badge. Validate also judges documents of formats that
+list does not name; each verdict carries its own `verificationBadgeLabel`, or
+none.
 
 A national standard reads fields of its own from the invoice object. The
 [generate reference](https://docs.beliq.eu/api-reference/generate/) lists them,

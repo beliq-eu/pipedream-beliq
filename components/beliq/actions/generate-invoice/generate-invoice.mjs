@@ -1,40 +1,14 @@
-import {
-  checkDepth, franceBlockLines, verdictWord,
-} from "@beliq/sdk/helpers";
 import beliq from "../../beliq.app.mjs";
 import { writeDocument } from "../../common/io.mjs";
 import {
-  parseObject, resolveGenerateTarget, usableFacturxProfile,
+  parseObject, resolveGenerateTarget, usableFacturxProfile, verdictSummary,
 } from "../../common/utils.mjs";
-
-/**
- * The written file and the API's verdict on the invoice XML. A France CTC block
- * leads, because the API reports it beside `valid`. With Validate Result off
- * nothing was checked, so no depth is named.
- */
-function generateSummary(out, verdict) {
-  const written = `Generated ${out.filename} (${out.sizeBytes} bytes)`;
-  if (!verdict) {
-    return `${written}.`;
-  }
-  if (verdict.verified === false) {
-    return `${written}, not validated.`;
-  }
-  const subject = out.contentType.includes("pdf")
-    ? "Verdict on the invoice XML"
-    : "Verdict";
-  const france = franceBlockLines(verdict);
-  const lead = france.length > 0
-    ? `${france.join(" ")} `
-    : "";
-  return `${lead}${written}. ${subject}: ${verdictWord(verdict)} (${checkDepth(verdict)}).`;
-}
 
 export default {
   key: "beliq-generate-invoice",
   name: "Generate Invoice",
-  description: "Create an e-invoice from a JSON invoice object and write it to `/tmp`: XML (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, FatturaPA, Facturae, e-SLOG and KSeF FA(3)) or a PDF (a hybrid PDF/A-3 on Factur-X and ZUGFeRD, a visualization on the others). Use it when you have invoice data, e.g. from a CRM, shop or spreadsheet row, and need a file to send or archive. Returns the file's `path`, with XML output the `xml` text too, and the API's verdict on the invoice XML in `validationResult`, whose `verificationBadgeLabel` is the check depth the API states (a verdict without it states none). Pass the `path` to **Validate Invoice**, or for XRechnung, ZUGFeRD, Factur-X and Peppol BIS to **Convert Invoice**, which takes no national format. With Validate Result on (the default), an invoice that breaks a rule fails with the rule IDs instead of returning the document. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/generate/)",
-  version: "0.0.2",
+  description: "Create an e-invoice from a JSON invoice object and write it to `/tmp`: XML (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, FatturaPA, Facturae, e-SLOG and KSeF FA(3)) or a PDF (a hybrid PDF/A-3 on Factur-X and ZUGFeRD, a visualization on the others). Use it when you have invoice data, e.g. from a CRM, shop or spreadsheet row, and need a file to send or archive. Returns the file's `path`, with XML output the `xml` text too, and the API's verdict on the invoice XML in `validationResult`, whose `verificationBadgeLabel` is the check depth the API states (a verdict without it states none). Pass the `path` to **Validate Invoice**, or for XRechnung, ZUGFeRD, Factur-X and Peppol BIS to **Convert Invoice**, which takes no national format. With Validate Result on (the default), an invoice that breaks a rule fails with the rule IDs instead of returning the document. With it off nothing is checked: `validationResult.verified` is `false`, and `valid` is then `false` because nothing looked, not because the document failed. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/generate/)",
+  version: "0.1.0",
   type: "action",
   ai: "optimized",
   annotations: {
@@ -135,7 +109,11 @@ export default {
     }
     out.sha256 = result.sha256;
     out.validationResult = result.validationResult;
-    $.export("$summary", generateSummary(out, result.validationResult));
+    // The verdict is about the invoice XML, also when the file is a PDF.
+    const subject = out.contentType.includes("pdf")
+      ? "verdict on the invoice XML"
+      : "verdict";
+    $.export("$summary", verdictSummary(result.validationResult, `Generated ${out.filename} (${out.sizeBytes} bytes), ${subject}`));
     return out;
   },
 };

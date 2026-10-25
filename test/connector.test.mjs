@@ -169,7 +169,7 @@ describe("Validate Invoice", () => {
     });
 
     expect(result).toEqual(verdict);
-    expect(summary).toBe(`Verdict: VALID (${DEPTH_NOT_STATED}), 0 errors.`);
+    expect(summary).toBe(`Verdict: VALID (${DEPTH_NOT_STATED}), 0 errors`);
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe("POST");
     expect(calls[0].url).toMatch(/^https:\/\/api\.beliq\.eu\/v1\/validate\?/);
@@ -193,6 +193,7 @@ describe("Validate Invoice", () => {
           ruleId: "BR-DE-15",
         },
       ],
+      warnings: [],
     }));
 
     const {
@@ -203,7 +204,7 @@ describe("Validate Invoice", () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(summary).toBe(`Verdict: INVALID (${DEPTH_NOT_STATED}), 2 errors.`);
+    expect(summary).toBe(`Verdict: INVALID (${DEPTH_NOT_STATED}), 2 errors`);
   });
 
   it("puts the check depth the API states beside the verdict, as it came", async () => {
@@ -217,7 +218,7 @@ describe("Validate Invoice", () => {
     });
 
     expect(result).toEqual(SCHEMA_CHECKED);
-    expect(summary).toBe(`Verdict: VALID (${SCHEMA_CHECKED.verificationBadgeLabel}), 0 errors.`);
+    expect(summary).toBe(`Verdict: VALID (${SCHEMA_CHECKED.verificationBadgeLabel}), 0 errors`);
   });
 
   it("names no depth when the API states none", async () => {
@@ -229,7 +230,7 @@ describe("Validate Invoice", () => {
     });
 
     expect(NO_BADGE.verificationBadgeLabel).toBeUndefined();
-    expect(summary).toBe(`Verdict: VALID (${DEPTH_NOT_STATED}), 0 errors.`);
+    expect(summary).toBe(`Verdict: VALID (${DEPTH_NOT_STATED}), 0 errors`);
   });
 
   it("leads with a France CTC block and counts the document as failed where valid is true", async () => {
@@ -244,9 +245,30 @@ describe("Validate Invoice", () => {
     });
 
     expect(result.valid).toBe(true);
-    expect(summary).toBe(`France CTC block, counted as a failure: ${FRANCE_MESSAGE} The API's verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}), 0 errors.`);
-    // The API's message names every blocking id, so they are not listed twice.
-    expect(summary.split(FRANCE_BLOCK.franceCtcBlockingRuleIds[0])).toHaveLength(2);
+    const count = FRANCE_BLOCK.franceCtcBlockingRuleIds.length;
+    expect(summary).toBe(`Failed: ${count} France CTC blocking rules (see warnings). Verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}), 0 errors`);
+    // The API's own message stays in the result, where the summary points.
+    expect(result.warnings.map((w) => w.message)).toContain(FRANCE_MESSAGE);
+  });
+
+  it("points at the blocking ids when the result carries no message for the block", async () => {
+    const verdict = {
+      ...FRANCE_BLOCK,
+      franceCtcBlockingRuleIds: [
+        FRANCE_BLOCK.franceCtcBlockingRuleIds[0],
+      ],
+      warnings: FRANCE_BLOCK.warnings
+        .filter((w) => w.ruleId !== "FRANCE_CTC_FINDINGS_BLOCK_TRANSMISSION"),
+    };
+    respondWith(() => jsonResponse(verdict));
+
+    const { summary } = await runAction(validateInvoice, {
+      inputSource: "text",
+      documentText: "<rsm:CrossIndustryInvoice/>",
+      franceCtc: true,
+    });
+
+    expect(summary).toBe(`Failed: 1 France CTC blocking rule (see franceCtcBlockingRuleIds). Verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}), 0 errors`);
   });
 
   it("honors an explicit PDF content type override", async () => {
@@ -254,6 +276,7 @@ describe("Validate Invoice", () => {
       valid: true,
       format: "cii",
       errors: [],
+      warnings: [],
     }));
 
     await runAction(validateInvoice, {
@@ -365,13 +388,16 @@ describe("Generate Invoice", () => {
     expect(result.sha256).toBe(createHash("sha256").update("<FatturaElettronica/>")
       .digest("hex"));
     expect(result.xml).toBe("<FatturaElettronica/>");
-    expect(summary).toBe(`Generated invoice.xml (21 bytes). Verdict: VALID (${SCHEMA_CHECKED.verificationBadgeLabel}).`);
+    expect(summary).toBe(`Generated invoice.xml (21 bytes), verdict: VALID (${SCHEMA_CHECKED.verificationBadgeLabel}), 0 errors`);
   });
 
   it("says the verdict of a PDF is about its invoice XML, and names no depth the API did not state", async () => {
     respondWith(() => generated("%PDF-1.7 visual", {
       contentType: "application/pdf",
-      validationResult: NO_BADGE,
+      validationResult: {
+        ...NO_BADGE,
+        verified: true,
+      },
     }));
 
     const { summary } = await runAction(generateInvoice, {
@@ -382,20 +408,25 @@ describe("Generate Invoice", () => {
       },
     });
 
-    expect(summary).toBe(`Generated invoice.pdf (15 bytes). Verdict on the invoice XML: VALID (${DEPTH_NOT_STATED}).`);
+    expect(summary).toBe(`Generated invoice.pdf (15 bytes), verdict on the invoice XML: VALID (${DEPTH_NOT_STATED}), 0 errors`);
   });
 
   it("names no verdict and no depth when Validate Result is off", async () => {
+    // What the API answers for verify: false: no ruleset ran.
+    const unverified = {
+      valid: false,
+      verified: false,
+      format: "ubl",
+      errors: [],
+      warnings: [],
+    };
     respondWith(() => generated("<Invoice/>", {
-      validationResult: {
-        valid: false,
-        verified: false,
-        errors: [],
-        warnings: [],
-      },
+      validationResult: unverified,
     }));
 
-    const { summary } = await runAction(generateInvoice, {
+    const {
+      result, summary,
+    } = await runAction(generateInvoice, {
       standard: "xrechnung",
       output: "xml",
       invoice: {
@@ -404,12 +435,17 @@ describe("Generate Invoice", () => {
       verify: false,
     });
 
-    expect(summary).toBe("Generated invoice.xml (10 bytes), not validated.");
+    expect(JSON.parse(bodyText(calls[0].body)).verify).toBe(false);
+    expect(result.validationResult).toEqual(unverified);
+    expect(summary).toBe("Generated invoice.xml (10 bytes), verdict: NOT VALIDATED");
   });
 
-  it("leads its summary with a France CTC block in the verdict", async () => {
+  it("leads its summary with a France CTC block and counts it as a failure", async () => {
     respondWith(() => generated("<rsm:CrossIndustryInvoice/>", {
-      validationResult: FRANCE_BLOCK,
+      validationResult: {
+        ...FRANCE_BLOCK,
+        verified: true,
+      },
     }));
 
     const { summary } = await runAction(generateInvoice, {
@@ -421,7 +457,8 @@ describe("Generate Invoice", () => {
       },
     });
 
-    expect(summary).toBe(`${FRANCE_MESSAGE} Generated invoice.xml (27 bytes). Verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}).`);
+    const count = FRANCE_BLOCK.franceCtcBlockingRuleIds.length;
+    expect(summary).toBe(`Failed: ${count} France CTC blocking rules (see warnings). Generated invoice.xml (27 bytes), verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}), 0 errors`);
   });
 
   it("includes the Factur-X profile only for the hybrid family and writes a .pdf", async () => {
