@@ -127,8 +127,8 @@ function generated(document, {
 }
 
 // Answers of the live API to POST /v1/validate, recorded on 2026-10-11 and
-// stored as they came: an Authority-checked CII with a France CTC block, a
-// Schema-checked FatturaPA, and a FatturaPA PA document no tier is on record for.
+// stored as they came: a CII with a France CTC block, a FatturaPA ordinaria and
+// a FatturaPA PA document no tier is on record for. Each label is read from them.
 function liveAnswer(name) {
   return JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
 }
