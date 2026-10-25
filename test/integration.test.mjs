@@ -58,6 +58,10 @@ describe.skipIf(!apiKey)("beliq live API", () => {
     expect(generated.filename).toBe("invoice.xml");
     expect(generated.sizeBytes).toBeGreaterThan(0);
     expect(generated.xml).toContain("<");
+    // Generate asks for the envelope, so the verdict and the depth the API
+    // states come back with the document.
+    expect(generated.validationResult?.verified).toBe(true);
+    expect(generated.validationResult?.verificationBadgeLabel).toBeTypeOf("string");
     await sleep(300);
 
     // Chained the way a workflow chains them: Generate's written file is
@@ -69,6 +73,7 @@ describe.skipIf(!apiKey)("beliq live API", () => {
       format: "auto",
     }, apiKey);
     expect(verdict).toHaveProperty("valid");
+    expect(verdict.verificationBadgeLabel).toBe(generated.validationResult.verificationBadgeLabel);
     await sleep(300);
   });
 });

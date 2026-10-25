@@ -20,7 +20,7 @@ export default {
     standard: {
       type: "string",
       label: "Standard",
-      description: "The e-invoice standard to produce, e.g. `xrechnung` for a German public-sector buyer or `facturx` for a French or German hybrid PDF. The NLCIUS option is Peppol BIS with the Dutch `netherlands-nlcius` profile. FatturaPA (`fatturapa`), Facturae (`facturae`), e-SLOG (`eslog`) and KSeF FA(3) (`ksef`) are Schema-checked: structure only, no business rules. KSeF FA(3) covers ordinary VAT invoices in PLN between Polish parties, at VAT rates 23, 22, 8, 7 and 5; [the Poland reference](https://docs.beliq.eu/format-reference/poland/) states the full scope. beliq does not operate KSeF submission.",
+      description: "The e-invoice standard to produce, e.g. `xrechnung` for a German public-sector buyer or `facturx` for a French or German hybrid PDF. The NLCIUS option is Peppol BIS with the Dutch `netherlands-nlcius` profile. How deep beliq checks each standard differs: [the rulesets reference](https://docs.beliq.eu/api-reference/rulesets/) lists each one's rule pack, version and badge, and [How verification works](https://docs.beliq.eu/compliance/how-verification-works/) explains each depth. KSeF FA(3) covers ordinary VAT invoices in PLN between Polish parties, at VAT rates 23, 22, 8, 7 and 5; [the Poland reference](https://docs.beliq.eu/format-reference/poland/) states the full scope. beliq does not operate KSeF submission.",
       options: STANDARD_OPTIONS,
       default: "xrechnung",
     },
@@ -55,7 +55,7 @@ ${JSON.stringify(SAMPLE_INVOICE, null, 2)}
     verify: {
       type: "boolean",
       label: "Validate Result",
-      description: "Validate the generated document before returning it, e.g. `true` (the default). When on, an invoice that breaks a rule of the standard fails with the rule IDs instead of returning a non-compliant document.",
+      description: "Validate the generated document before returning it, e.g. `true` (the default). When on, an invoice that breaks a rule of the standard fails with the rule IDs instead of returning the document, and a returned document comes with the API's verdict and the check depth it states. When off, nothing is checked.",
       optional: true,
       default: true,
     },

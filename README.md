@@ -1,10 +1,11 @@
 # beliq connector for Pipedream
 
-Generate, validate, parse, and convert EU-compliant e-invoices from a Pipedream
-workflow. [beliq](https://beliq.eu) checks documents against authority-pinned, nightly-drift-checked
-rules (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, EN 16931). It also generates
-FatturaPA, Facturae, e-SLOG and KSeF FA(3), which are Schema-checked: see
-[Format coverage](#format-coverage).
+Validate, generate, convert and parse EU e-invoices with the
+[beliq](https://beliq.eu) API from a Pipedream workflow. Every verdict carries the
+check depth the API states for it, or says that none was stated:
+[How verification works](https://docs.beliq.eu/compliance/how-verification-works/)
+explains each depth, and [Format coverage](#format-coverage) says where to read
+each format's.
 
 This repository is the source of truth for the `beliq` component in the
 [Pipedream registry](https://github.com/PipedreamHQ/pipedream). It is not an npm
@@ -14,8 +15,8 @@ package; Pipedream distributes components from the registry monorepo.
 
 | Action | What it does |
 | --- | --- |
-| **Generate Invoice** | Build a compliant e-invoice (XML or PDF) from an EN 16931 invoice object. |
-| **Validate Invoice** | Check an XML or PDF invoice against beliq's authority-pinned rules and return a structured verdict. |
+| **Generate Invoice** | Build an e-invoice (XML or PDF) from an EN 16931 invoice object, with the API's verdict on it and the check depth the API states. |
+| **Validate Invoice** | Check an XML or PDF invoice against the rule packs and schemas beliq lists for its format and return the API's verdict, with the check depth the API states. |
 | **Parse Invoice** | Extract a structured EN 16931 invoice object from an XML or PDF document. |
 | **Convert Invoice** | Convert an invoice document from one EN 16931 format to another. |
 | **Check Account** | Verify the connected API key and read its plan and quota. Does not consume quota. |
@@ -46,20 +47,36 @@ Connect a beliq account with an API key from the
   step's synced `/tmp` directory and the action returns the file path plus
   metadata (content type, size, and the response headers such as the Schematron
   version or the source/target format). Downstream steps read the file by path.
+  Generate also returns the document's `sha256` and the API's verdict in
+  `validationResult`. An XML source converted to Factur-X or ZUGFeRD comes back
+  as CII XML. A PDF comes back from Convert only when a hybrid PDF source is
+  converted to one of them, and then `pdfNote` says which two things that PDF
+  can be and what was checked on each
+  ([detail](https://docs.beliq.eu/api-reference/convert/#a-pdf-sent-for-a-zugferd-or-factur-x-target)).
+
+## Verdicts
+
+Validate returns the API's result as it came. Read `valid` together with
+`verificationBadgeLabel`, the check depth the API states for that result; a
+result without it states none. `valid` means the document passed the rule packs
+and schemas beliq lists for its format, in the stated versions. It does not mean
+every recipient, validation tool or tax authority accepts it.
+
+The step summary words the verdict as `VALID` or `INVALID` with the check depth
+beside it, or `check depth not stated`. A France CTC block
+(`franceCtcBlockingRuleIds`) ends a transmission even where `valid` is true, so
+the summary names it first and counts the document as failed. Generate's
+summary does the same for the verdict on the document it produced, and with
+Validate Result off says the document was not validated.
 
 ## Format coverage
 
 The format dropdowns come straight from the SDK's lists. The Standard dropdown
 of **Generate Invoice** carries every standard `POST /v1/generate` accepts, plus
-the NLCIUS profile of Peppol BIS.
-`GET https://api.beliq.eu/v1/rulesets` publishes each format with a badge saying
-how deep its check goes:
-
-- **Authority-checked** (the authority's own rules): XRechnung, ZUGFeRD,
-  Factur-X, Peppol BIS and NLCIUS.
-- **Schema-checked** (structure only, no business rules): FatturaPA, Facturae,
-  e-SLOG and KSeF FA(3). Their authority publishes no machine-readable business
-  rules.
+the NLCIUS profile of Peppol BIS. How deep beliq checks a format differs by
+format. [`GET https://api.beliq.eu/v1/rulesets`](https://docs.beliq.eu/api-reference/rulesets/),
+which needs no API key, publishes each format with its rule pack, the version in
+force and its badge.
 
 A national standard reads fields of its own from the invoice object. The
 [generate reference](https://docs.beliq.eu/api-reference/generate/) lists them,
