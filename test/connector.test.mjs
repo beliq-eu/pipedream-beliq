@@ -2,10 +2,15 @@ import os from "os";
 import path from "path";
 import http from "http";
 import fsp from "fs/promises";
+import { createHash } from "crypto";
+import { readFileSync } from "fs";
 import {
   afterEach, beforeEach, describe, expect, it, vi,
 } from "vitest";
 import { ConfigurationError } from "@pipedream/platform";
+import {
+  CONVERT_PDF_LINE, DEPTH_NOT_STATED,
+} from "@beliq/sdk/helpers";
 import generateInvoice from "../components/beliq/actions/generate-invoice/generate-invoice.mjs";
 import validateInvoice from "../components/beliq/actions/validate-invoice/validate-invoice.mjs";
 import parseInvoice from "../components/beliq/actions/parse-invoice/parse-invoice.mjs";
@@ -92,6 +97,47 @@ function errorResponse(code, message, status = 400, details) {
   });
 }
 
+// A generate answer as the API sends it when asked for the JSON envelope: the
+// document base64-encoded in `output`, its sha256, and the verdict.
+function generated(document, {
+  contentType = "application/xml", headers = {}, validationResult = {
+    valid: true,
+    verified: true,
+    errors: [],
+    warnings: [],
+  },
+} = {}) {
+  const bytes = Buffer.from(document);
+  return new Response(JSON.stringify({
+    success: true,
+    data: {
+      output: bytes.toString("base64"),
+      contentType,
+      sha256: createHash("sha256").update(bytes)
+        .digest("hex"),
+      validationResult,
+    },
+  }), {
+    status: 200,
+    headers: {
+      "content-type": "application/json",
+      ...headers,
+    },
+  });
+}
+
+// Answers of the live API to POST /v1/validate, recorded on 2026-10-11 and
+// stored as they came: a CII with a France CTC block, a FatturaPA ordinaria and
+// a FatturaPA PA document no tier is on record for. Each label is read from them.
+function liveAnswer(name) {
+  return JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
+}
+const FRANCE_BLOCK = liveAnswer("live-validate-france-previous.json");
+const SCHEMA_CHECKED = liveAnswer("live-validate-schema.json");
+const NO_BADGE = liveAnswer("live-validate-nobadge.json");
+const FRANCE_MESSAGE = FRANCE_BLOCK.warnings
+  .find((w) => w.ruleId === "FRANCE_CTC_FINDINGS_BLOCK_TRANSMISSION").message;
+
 function bodyText(body) {
   if (typeof body === "string") {
     return body;
@@ -123,7 +169,7 @@ describe("Validate Invoice", () => {
     });
 
     expect(result).toEqual(verdict);
-    expect(summary).toBe("Document is valid");
+    expect(summary).toBe(`Verdict: VALID (${DEPTH_NOT_STATED}), 0 errors`);
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe("POST");
     expect(calls[0].url).toMatch(/^https:\/\/api\.beliq\.eu\/v1\/validate\?/);
@@ -147,6 +193,7 @@ describe("Validate Invoice", () => {
           ruleId: "BR-DE-15",
         },
       ],
+      warnings: [],
     }));
 
     const {
@@ -157,7 +204,71 @@ describe("Validate Invoice", () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(summary).toBe("Document is invalid (2 errors)");
+    expect(summary).toBe(`Verdict: INVALID (${DEPTH_NOT_STATED}), 2 errors`);
+  });
+
+  it("puts the check depth the API states beside the verdict, as it came", async () => {
+    respondWith(() => jsonResponse(SCHEMA_CHECKED));
+
+    const {
+      result, summary,
+    } = await runAction(validateInvoice, {
+      inputSource: "text",
+      documentText: "<FatturaElettronica/>",
+    });
+
+    expect(result).toEqual(SCHEMA_CHECKED);
+    expect(summary).toBe(`Verdict: VALID (${SCHEMA_CHECKED.verificationBadgeLabel}), 0 errors`);
+  });
+
+  it("names no depth when the API states none", async () => {
+    respondWith(() => jsonResponse(NO_BADGE));
+
+    const { summary } = await runAction(validateInvoice, {
+      inputSource: "text",
+      documentText: "<FatturaElettronica/>",
+    });
+
+    expect(NO_BADGE.verificationBadgeLabel).toBeUndefined();
+    expect(summary).toBe(`Verdict: VALID (${DEPTH_NOT_STATED}), 0 errors`);
+  });
+
+  it("leads with a France CTC block and counts the document as failed where valid is true", async () => {
+    respondWith(() => jsonResponse(FRANCE_BLOCK));
+
+    const {
+      result, summary,
+    } = await runAction(validateInvoice, {
+      inputSource: "text",
+      documentText: "<rsm:CrossIndustryInvoice/>",
+      franceCtc: true,
+    });
+
+    expect(result.valid).toBe(true);
+    const count = FRANCE_BLOCK.franceCtcBlockingRuleIds.length;
+    expect(summary).toBe(`Failed: ${count} France CTC blocking rules (see warnings). Verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}), 0 errors`);
+    // The API's own message stays in the result, where the summary points.
+    expect(result.warnings.map((w) => w.message)).toContain(FRANCE_MESSAGE);
+  });
+
+  it("points at the blocking ids when the result carries no message for the block", async () => {
+    const verdict = {
+      ...FRANCE_BLOCK,
+      franceCtcBlockingRuleIds: [
+        FRANCE_BLOCK.franceCtcBlockingRuleIds[0],
+      ],
+      warnings: FRANCE_BLOCK.warnings
+        .filter((w) => w.ruleId !== "FRANCE_CTC_FINDINGS_BLOCK_TRANSMISSION"),
+    };
+    respondWith(() => jsonResponse(verdict));
+
+    const { summary } = await runAction(validateInvoice, {
+      inputSource: "text",
+      documentText: "<rsm:CrossIndustryInvoice/>",
+      franceCtc: true,
+    });
+
+    expect(summary).toBe(`Failed: 1 France CTC blocking rule (see franceCtcBlockingRuleIds). Verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}), 0 errors`);
   });
 
   it("honors an explicit PDF content type override", async () => {
@@ -165,6 +276,7 @@ describe("Validate Invoice", () => {
       valid: true,
       format: "cii",
       errors: [],
+      warnings: [],
     }));
 
     await runAction(validateInvoice, {
@@ -215,10 +327,9 @@ describe("Parse Invoice", () => {
 
 describe("Generate Invoice", () => {
   it("posts the invoice JSON, writes the XML to /tmp, and returns metadata", async () => {
-    respondWith(() => new Response("<Invoice>generated</Invoice>", {
-      status: 200,
+    respondWith(() => generated("<Invoice>generated</Invoice>", {
+      contentType: "application/xml",
       headers: {
-        "content-type": "application/xml",
         "x-schematron-version": "1.2.3",
       },
     }));
@@ -252,11 +363,108 @@ describe("Generate Invoice", () => {
     expect(await fsp.readFile(result.path, "utf8")).toBe("<Invoice>generated</Invoice>");
   });
 
+  // The envelope is the only generate answer that carries the verdict's depth.
+  it("asks for the JSON envelope and returns the verdict with the depth the API states", async () => {
+    const validationResult = {
+      ...SCHEMA_CHECKED,
+      verified: true,
+    };
+    respondWith(() => generated("<FatturaElettronica/>", {
+      validationResult,
+    }));
+
+    const {
+      result, summary,
+    } = await runAction(generateInvoice, {
+      standard: "fatturapa",
+      output: "xml",
+      invoice: {
+        number: "IT-1",
+      },
+    });
+
+    expect(calls[0].headers.get("accept")).toBe("application/json");
+    expect(result.validationResult).toEqual(validationResult);
+    expect(result.sha256).toBe(createHash("sha256").update("<FatturaElettronica/>")
+      .digest("hex"));
+    expect(result.xml).toBe("<FatturaElettronica/>");
+    expect(summary).toBe(`Generated invoice.xml (21 bytes), verdict: VALID (${SCHEMA_CHECKED.verificationBadgeLabel}), 0 errors`);
+  });
+
+  it("says the verdict of a PDF is about its invoice XML, and names no depth the API did not state", async () => {
+    respondWith(() => generated("%PDF-1.7 visual", {
+      contentType: "application/pdf",
+      validationResult: {
+        ...NO_BADGE,
+        verified: true,
+      },
+    }));
+
+    const { summary } = await runAction(generateInvoice, {
+      standard: "fatturapa",
+      output: "pdf",
+      invoice: {
+        number: "IT-2",
+      },
+    });
+
+    expect(summary).toBe(`Generated invoice.pdf (15 bytes), verdict on the invoice XML: VALID (${DEPTH_NOT_STATED}), 0 errors`);
+  });
+
+  it("names no verdict and no depth when Validate Result is off", async () => {
+    // What the API answers for verify: false: no ruleset ran.
+    const unverified = {
+      valid: false,
+      verified: false,
+      format: "ubl",
+      errors: [],
+      warnings: [],
+    };
+    respondWith(() => generated("<Invoice/>", {
+      validationResult: unverified,
+    }));
+
+    const {
+      result, summary,
+    } = await runAction(generateInvoice, {
+      standard: "xrechnung",
+      output: "xml",
+      invoice: {
+        number: "INV-9",
+      },
+      verify: false,
+    });
+
+    expect(JSON.parse(bodyText(calls[0].body)).verify).toBe(false);
+    expect(result.validationResult).toEqual(unverified);
+    expect(summary).toBe("Generated invoice.xml (10 bytes), verdict: NOT VALIDATED");
+  });
+
+  it("leads its summary with a France CTC block and counts it as a failure", async () => {
+    respondWith(() => generated("<rsm:CrossIndustryInvoice/>", {
+      validationResult: {
+        ...FRANCE_BLOCK,
+        verified: true,
+      },
+    }));
+
+    const { summary } = await runAction(generateInvoice, {
+      standard: "facturx",
+      output: "xml",
+      facturxProfile: "extended-ctc-fr",
+      invoice: {
+        number: "FR-1",
+      },
+    });
+
+    const count = FRANCE_BLOCK.franceCtcBlockingRuleIds.length;
+    expect(summary).toBe(`Failed: ${count} France CTC blocking rules (see warnings). Generated invoice.xml (27 bytes), verdict: VALID (${FRANCE_BLOCK.verificationBadgeLabel}), 0 errors`);
+  });
+
   it("includes the Factur-X profile only for the hybrid family and writes a .pdf", async () => {
-    respondWith(() => new Response("%PDF-1.7 hybrid", {
-      status: 200,
+    respondWith(() => generated("%PDF-1.7 hybrid", {
+      contentType: "application/pdf",
       headers: {
-        "content-type": "application/pdf",
         "x-pdf-kind": "facturx",
       },
     }));
@@ -277,11 +485,8 @@ describe("Generate Invoice", () => {
   });
 
   it("resolves the NLCIUS target to peppol-bis + the netherlands-nlcius profile", async () => {
-    respondWith(() => new Response("<Invoice/>", {
-      status: 200,
-      headers: {
-        "content-type": "application/xml",
-      },
+    respondWith(() => generated("<Invoice/>", {
+      contentType: "application/xml",
     }));
 
     await runAction(generateInvoice, {
@@ -306,11 +511,8 @@ describe("Generate Invoice", () => {
   // every other standard unless the request names a visual to render, so without
   // `template` the PDF choice is a 400 no prop value avoids.
   it("asks for the built-in visual when PDF is chosen and no stored template is given", async () => {
-    respondWith(() => new Response("%PDF-1.7 visual", {
-      status: 200,
-      headers: {
-        "content-type": "application/pdf",
-      },
+    respondWith(() => generated("%PDF-1.7 visual", {
+      contentType: "application/pdf",
     }));
 
     await runAction(generateInvoice, {
@@ -335,11 +537,8 @@ describe("Generate Invoice", () => {
     "eslog",
     "ksef",
   ])("sends %s as itself, with the built-in visual and no Factur-X profile", async (standard) => {
-    respondWith(() => new Response("%PDF-1.7 visual", {
-      status: 200,
-      headers: {
-        "content-type": "application/pdf",
-      },
+    respondWith(() => generated("%PDF-1.7 visual", {
+      contentType: "application/pdf",
     }));
 
     await runAction(generateInvoice, {
@@ -363,11 +562,8 @@ describe("Generate Invoice", () => {
   // out for them too rather than being gated on a standard list the connector
   // would then have to keep in step with the API.
   it("asks for the built-in visual on the hybrid standards as well", async () => {
-    respondWith(() => new Response("%PDF-1.7 hybrid", {
-      status: 200,
-      headers: {
-        "content-type": "application/pdf",
-      },
+    respondWith(() => generated("%PDF-1.7 hybrid", {
+      contentType: "application/pdf",
     }));
 
     await runAction(generateInvoice, {
@@ -383,11 +579,8 @@ describe("Generate Invoice", () => {
   });
 
   it("prefers a stored template over the built-in visual", async () => {
-    respondWith(() => new Response("%PDF-1.7 visual", {
-      status: 200,
-      headers: {
-        "content-type": "application/pdf",
-      },
+    respondWith(() => generated("%PDF-1.7 visual", {
+      contentType: "application/pdf",
     }));
 
     await runAction(generateInvoice, {
@@ -408,11 +601,8 @@ describe("Generate Invoice", () => {
 
 describe("Generate Invoice profile and verify gating", () => {
   async function generate(props) {
-    respondWith(() => new Response("<Invoice/>", {
-      status: 200,
-      headers: {
-        "content-type": "application/xml",
-      },
+    respondWith(() => generated("<Invoice/>", {
+      contentType: "application/xml",
     }));
     await runAction(generateInvoice, {
       output: "xml",
@@ -494,6 +684,27 @@ describe("Convert Invoice", () => {
     expect(result.filename).toBe("converted.xml");
     expect(result.targetFormat).toBe("ubl");
     expect(result.sourceFormat).toBe("cii");
+    expect(result).not.toHaveProperty("pdfNote");
+  });
+
+  it("says what a returned PDF is, since no field names which of its two paths ran", async () => {
+    respondWith(() => new Response("%PDF-1.7 converted", {
+      status: 200,
+      headers: {
+        "content-type": "application/pdf",
+        "x-target-format": "facturx",
+      },
+    }));
+
+    const { result } = await runAction(convertInvoice, {
+      inputSource: "text",
+      documentText: "%PDF-1.7 hybrid",
+      contentType: "application/pdf",
+      targetFormat: "facturx",
+    });
+
+    expect(result.filename).toBe("converted.pdf");
+    expect(result.pdfNote).toBe(CONVERT_PDF_LINE);
   });
 });
 

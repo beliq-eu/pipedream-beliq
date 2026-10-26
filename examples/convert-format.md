@@ -1,7 +1,10 @@
 # Convert an invoice between formats
 
 Convert a received invoice from one EN 16931 format to another, for example a
-CII document to UBL, or a UBL document to a ZUGFeRD hybrid PDF.
+CII document to UBL, or a Factur-X PDF to UBL. An XML source converted to
+ZUGFeRD or Factur-X comes back as CII XML; a PDF comes back only when a hybrid
+PDF source is converted to one of them, and the result's `pdfNote` then says what
+that PDF is.
 
 ## Steps
 

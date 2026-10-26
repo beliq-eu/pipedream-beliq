@@ -1,7 +1,7 @@
 # Generate a hybrid PDF/A-3 e-invoice
 
 Turn structured invoice data (from a CRM, a billing system, or a form) into a
-compliant ZUGFeRD / Factur-X hybrid PDF.
+ZUGFeRD / Factur-X hybrid PDF.
 
 ## Steps
 
@@ -11,12 +11,15 @@ compliant ZUGFeRD / Factur-X hybrid PDF.
    `buyer`, `lines`, totals).
 3. **beliq -> Generate Invoice**:
    - Standard: `ZUGFeRD` (or `Factur-X`)
-   - Output: `PDF (hybrid PDF/A-3)`
+   - Output: `PDF`
    - Factur-X / ZUGFeRD Profile: `EN 16931`
    - Invoice: the object from step 2
-   - Validate Result: on (fails closed if the generated document is not compliant)
-4. **Deliver**: the step returns the file path in `/tmp` plus metadata. Attach
-   the file to an email step, upload it to storage, or send it onward.
+   - Validate Result: on (fails with the rule IDs if the generated document
+     breaks a rule of the standard)
+4. **Deliver**: the step returns the file path in `/tmp` plus metadata, and the
+   API's verdict on the invoice XML in `validationResult`, with the check depth
+   the API states in `verificationBadgeLabel`. Attach the file to an email step,
+   upload it to storage, or send it onward.
 
 ## Notes
 
