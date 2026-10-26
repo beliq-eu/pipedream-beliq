@@ -13,7 +13,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@beliq/sdk": "^0.5.1",
+    "@beliq/sdk": "^0.5.2",
     "@pipedream/platform": "^3.4.0"
   }
 }
