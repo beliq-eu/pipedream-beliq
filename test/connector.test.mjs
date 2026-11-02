@@ -687,6 +687,66 @@ describe("Convert Invoice", () => {
     expect(result).not.toHaveProperty("pdfNote");
   });
 
+  it("returns each lost element as the object the API sent", async () => {
+    // From the worked example at https://docs.beliq.eu/api-reference/convert/#lostelement-schema
+    const lost = {
+      path: "/Invoice/{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}AccountingSupplierParty/{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}Party/cbc:EndpointID",
+      value: null,
+      reason: "Peppol endpoint stripped (target is not peppol-bis)",
+      severity: "info",
+      acceptableLoss: true,
+    };
+    respondWith(() => new Response("<ubl>converted</ubl>", {
+      status: 200,
+      headers: {
+        "content-type": "application/xml",
+        "x-lost-elements-count": "1",
+        "x-lost-elements": JSON.stringify([
+          lost,
+        ]),
+      },
+    }));
+
+    const { result } = await runAction(convertInvoice, {
+      inputSource: "text",
+      documentText: "<ubl/>",
+      targetFormat: "ubl",
+    });
+
+    expect(result.lostElementsCount).toBe(1);
+    expect(result.lostElements).toEqual([
+      lost,
+    ]);
+  });
+
+  it("returns the one truncation entry of a list past the header cap, with the exact count", async () => {
+    const truncated = {
+      truncated: true,
+      reason: "Audit list exceeded 6144 bytes (412 entries); see X-Lost-Elements-Count for the exact count.",
+    };
+    respondWith(() => new Response("<cii>converted</cii>", {
+      status: 200,
+      headers: {
+        "content-type": "application/xml",
+        "x-lost-elements-count": "412",
+        "x-lost-elements": JSON.stringify([
+          truncated,
+        ]),
+      },
+    }));
+
+    const { result } = await runAction(convertInvoice, {
+      inputSource: "text",
+      documentText: "<ubl/>",
+      targetFormat: "cii",
+    });
+
+    expect(result.lostElementsCount).toBe(412);
+    expect(result.lostElements).toEqual([
+      truncated,
+    ]);
+  });
+
   it("says what a returned PDF is, since no field names which of its two paths ran", async () => {
     respondWith(() => new Response("%PDF-1.7 converted", {
       status: 200,
@@ -947,6 +1007,10 @@ describe("option lists", () => {
   // which standards are offered, so a new one arrives here without a label.
   it("gives every generate target a label of its own", () => {
     expect(STANDARD_OPTIONS.filter((o) => o.label === o.value)).toEqual([]);
+  });
+
+  it("gives every validate format a label of its own", () => {
+    expect(VALIDATE_FORMAT_OPTIONS.filter((o) => o.label === o.value)).toEqual([]);
   });
 });
 

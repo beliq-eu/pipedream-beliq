@@ -18,7 +18,12 @@ that PDF is.
    - Target Profile: `EN 16931` (applies only to the Factur-X / ZUGFeRD family)
 4. **Use the result**: the converted document is written to `/tmp` and the action
    returns the path plus metadata, including any elements that could not be carried
-   across (`lostElements`).
+   across (`lostElements`). Each entry has the `path`, `value`, `reason`, `severity`
+   and `acceptableLoss` that
+   [the LostElement schema](https://docs.beliq.eu/api-reference/convert/#lostelement-schema)
+   describes. When the list would pass the API's 6 KB header cap, it holds one
+   `{ "truncated": true }` entry instead of the losses, and `lostElementsCount` stays
+   the exact count.
 
 ## Notes
 
