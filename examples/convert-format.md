@@ -17,11 +17,18 @@ that PDF is.
    - Target Format: `UBL` (or `ZUGFeRD` / `Factur-X` / `XRechnung` / `Peppol BIS`)
    - Target Profile: `EN 16931` (applies only to the Factur-X / ZUGFeRD family)
 4. **Use the result**: the converted document is written to `/tmp` and the action
-   returns the path plus metadata, including any elements that could not be carried
-   across (`lostElements`).
+   returns the path plus metadata, including `lostElements`: the source elements the
+   engine recorded as having no target equivalent. A loss the engine does not detect
+   is not listed. Each entry has the `path`, `value`, `reason`, `severity`
+   and `acceptableLoss` that
+   [the LostElement schema](https://docs.beliq.eu/api-reference/convert/#lostelement-schema)
+   describes. When the list would pass the API's 6 KB header cap, it holds one
+   `{ "truncated": true }` entry instead of the losses, and `lostElementsCount` stays
+   the exact count.
 
 ## Notes
 
 - A conversion can be lossy when the target format cannot represent every source
-  element. Check `lostElementsCount` in the result.
+  element. `lostElementsCount` counts the losses the engine recorded, so `0` does
+  not prove that nothing was lost.
 - `dropFranceCtcOverlay` drops the French CTC overlay when the target cannot hold it.

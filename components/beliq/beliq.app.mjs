@@ -96,7 +96,7 @@ ${JSON.stringify(SAMPLE_INVOICE, null, 2)}
     validateFormat: {
       type: "string",
       label: "Format",
-      description: "The syntax of the document, e.g. `cii` for Factur-X, ZUGFeRD or a CII XRechnung, `ubl` for Peppol BIS or a UBL XRechnung. `auto` (the default) detects it.",
+      description: "The format of the document, e.g. `cii` for Factur-X, ZUGFeRD or a CII XRechnung, `ubl` for Peppol BIS or a UBL XRechnung. `auto` (the default) detects it.",
       options: VALIDATE_FORMAT_OPTIONS,
       optional: true,
       default: "auto",
