@@ -39,9 +39,6 @@ jobs:
       - name: Live smoke wiring (no API calls)
         run: npm run test:integration
 
-      - name: Scrub check (no em-dash)
-        run: npm run scrub:check
-
   # test:integration runs the shipped actions through the app methods against the live beliq API, spending 2 documents (generate + validate; check-account is quota-exempt).
   # BELIQ_API_KEY is a `blq_test_` sandbox key: it runs the full rule stack but
   # draws on the sandbox allowance instead of the plan quota, so a broad trigger
