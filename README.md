@@ -113,7 +113,6 @@ npm test            # offline tests: the real actions, app methods and SDK
                     # registry review rules (test/registry-rules.test.mjs)
 npm run lint        # Pipedream component lint, the registry's formatting
                     # rules and the size and complexity caps
-npm run scrub:check # fail on a stray em-dash
 ```
 
 Live smoke tests run against the real API and are skipped unless a key is set.

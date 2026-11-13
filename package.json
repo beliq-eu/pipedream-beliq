@@ -10,8 +10,7 @@
     "test:watch": "vitest",
     "test:integration": "vitest run test/integration.test.mjs",
     "lint": "eslint components/beliq",
-    "lint:fix": "eslint components/beliq --fix",
-    "scrub:check": "bash scripts/scrub-check.sh"
+    "lint:fix": "eslint components/beliq --fix"
   },
   "devDependencies": {
     "@beliq/sdk": "^0.6.0",
