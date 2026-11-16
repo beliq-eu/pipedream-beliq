@@ -99,10 +99,12 @@ legal document is the XML. NLCIUS always returns XML.
 The **Convert Invoice** dropdowns are shorter than the Generate one because the
 API's own convert enums are: no national format is a conversion source or target.
 
-The connector generates and validates the document. Transmission (Peppol, PA,
-KSeF, SDI), filing and reporting stay with your access point: beliq does not
-operate KSeF submission, and no action of this component sends or files an
-invoice.
+beliq covers three steps of an e-invoice: generate, validate, and deliver (in
+development). This connector runs the first two and also parses and converts
+documents; no action of it sends or files an invoice. Until delivery through
+beliq is available, transmission (Peppol, plateforme agréée, SDI) and
+tax-authority reporting stay with your access point. Archiving stays with you,
+and beliq does not operate KSeF submission.
 
 ## Development
 
