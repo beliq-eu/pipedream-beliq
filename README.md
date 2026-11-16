@@ -82,12 +82,13 @@ with an HTTP trigger.
 When beliq asks for a longer wait than the setting allows, for example a 503
 `DATABASE_UNAVAILABLE` with `Retry-After: 30`, the step fails at once. Its error
 starts with `beliq is unavailable for now`, says how many seconds to wait, and
-ends in the `(CODE)`. A connection beliq never answered gives the same lead and
-says that beliq did not say when.
+ends in the `(CODE)`. A refused connection gives the same lead and says that
+beliq did not say when. An attempt that gets no answer ends after 20 seconds
+with the SDK's `(TIMEOUT)` error, and is not retried.
 
 To ride out longer outages, raise the setting and the workflow's timeout
 (the workflow's Settings) together, and keep the timeout at least 20 seconds
-above the setting. The setting goes up to 730, so that a step fits Pipedream's
+above the setting. The setting goes up to 720, so that a step fits Pipedream's
 750-second ceiling. `0` turns retrying off. **Check Account** always uses the
 default.
 

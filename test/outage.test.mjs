@@ -169,6 +169,15 @@ describe("a step during an outage ends inside the workflow's timeout", () => {
     expect(requests).toBe(1);
   });
 
+  it("refuses a Retry for up to that is not a number, before any request", async () => {
+    handler = (_req, res) => valid(res);
+    const result = await validate({
+      retryForSeconds: "abc",
+    });
+    expect(result.message).toBe("Retry for up to (seconds) must be a number from 0 to 720, not \"abc\".");
+    expect(requests).toBe(0);
+  });
+
   it("ends before the workflow's timeout when the retry after a blip hangs", async () => {
     handler = (_req, res, n) => {
       if (n === 1) blip(res);
@@ -176,6 +185,7 @@ describe("a step during an outage ends inside the workflow's timeout", () => {
     const result = await validate();
     expect(result.ok).toBe(false);
     expect(requests).toBe(2);
+    expect(result.message).toContain("(TIMEOUT)");
     expect(result.ms).toBeGreaterThanOrEqual(ATTEMPT_TIMEOUT_MS);
     expect(result.ms).toBeLessThan(HOST_LIMIT_MS);
   }, HOST_LIMIT_MS + 10_000);

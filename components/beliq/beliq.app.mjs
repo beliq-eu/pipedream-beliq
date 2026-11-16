@@ -1,4 +1,5 @@
 import { Beliq } from "@beliq/sdk";
+import { ConfigurationError } from "@pipedream/platform";
 import { mapError } from "./common/errors.mjs";
 import {
   ATTEMPT_TIMEOUT_MS,
@@ -180,9 +181,21 @@ ${JSON.stringify(SAMPLE_INVOICE, null, 2)}
     _client(retryForSeconds) {
       return new Beliq({
         apiKey: this.$auth.api_key,
-        retryBudgetMs: (retryForSeconds ?? DEFAULT_RETRY_SECONDS) * 1000,
+        retryBudgetMs: this._retrySeconds(retryForSeconds) * 1000,
         timeoutMs: ATTEMPT_TIMEOUT_MS,
       });
+    },
+    /**
+     * The Retry for up to value as a number of seconds. An expression can hand
+     * over any value, and a NaN budget would never end the SDK's retries.
+     */
+    _retrySeconds(value) {
+      if (value === undefined || value === null || value === "") return DEFAULT_RETRY_SECONDS;
+      const seconds = Number(value);
+      if (!Number.isFinite(seconds) || seconds < 0 || seconds > MAX_RETRY_SECONDS) {
+        throw new ConfigurationError(`Retry for up to (seconds) must be a number from 0 to ${MAX_RETRY_SECONDS}, not ${JSON.stringify(value)}.`);
+      }
+      return seconds;
     },
     /**
      * Run one SDK operation and turn a failure into a readable error. The SDK
