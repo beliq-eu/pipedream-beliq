@@ -71,6 +71,26 @@ With Validate Result off nothing is checked: `validationResult.verified` is
 `false`, `valid` is then `false` because nothing looked, not because the
 document failed, and the summary says `NOT VALIDATED`.
 
+## When beliq is unavailable
+
+The four document actions have a **Retry for up to (seconds)** setting, 5 by
+default. Within it, a step retries a short outage, such as a dropped connection
+or a 503 from the edge. Each attempt ends after 20 seconds. At the default, a
+step ends within 25 seconds, inside the 30-second default timeout of a workflow
+with an HTTP trigger.
+
+When beliq asks for a longer wait than the setting allows, for example a 503
+`DATABASE_UNAVAILABLE` with `Retry-After: 30`, the step fails at once. Its error
+starts with `beliq is unavailable for now`, says how many seconds to wait, and
+ends in the `(CODE)`. A connection beliq never answered gives the same lead and
+says that beliq did not say when.
+
+To ride out longer outages, raise the setting and the workflow's timeout
+(the workflow's Settings) together, and keep the timeout at least 20 seconds
+above the setting. The setting goes up to 730, so that a step fits Pipedream's
+750-second ceiling. `0` turns retrying off. **Check Account** always uses the
+default.
+
 ## Format coverage
 
 The format dropdowns come straight from the SDK's lists. The Standard dropdown

@@ -6,7 +6,7 @@ export default {
   key: "beliq-parse-invoice",
   name: "Parse Invoice",
   description: "Read an XML or PDF e-invoice and return its content as a structured JSON invoice object: number, dates, seller, buyer, lines and totals. The object is a subset of the document: `warnings` names what the document holds beyond it, e.g. the VAT breakdown, and any value that could not be read. Use it to move a received invoice into a spreadsheet, database or accounting step. Takes pasted XML or a file, e.g. an uploaded Factur-X PDF or the `path` that **Convert Invoice** returns. Parsing does not check the rules; use **Validate Invoice** for that. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/parse/)",
-  version: "0.0.2",
+  version: "0.1.0",
   type: "action",
   ai: "optimized",
   annotations: {
@@ -52,6 +52,12 @@ export default {
         "advanced",
       ],
     },
+    retryForSeconds: {
+      propDefinition: [
+        beliq,
+        "retryForSeconds",
+      ],
+    },
     syncDir: {
       type: "dir",
       accessMode: "read",
@@ -67,6 +73,8 @@ export default {
       format: this.format,
       contentType,
       advanced: parseObject(this.advanced, "Advanced (JSON)"),
+    }, {
+      retryForSeconds: this.retryForSeconds,
     });
     const number = result?.invoice?.number;
     const format = result?.format
