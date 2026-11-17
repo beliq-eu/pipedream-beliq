@@ -80,7 +80,7 @@ step ends within 25 seconds, inside the 30-second default timeout of a workflow
 with an HTTP trigger.
 
 When beliq asks for a longer wait than the setting allows, for example a 503
-`DATABASE_UNAVAILABLE` with `Retry-After: 30`, the step fails at once. Its error
+`DATABASE_UNAVAILABLE` with `Retry-After: 15`, the step fails at once. Its error
 starts with `beliq is unavailable for now`, says how many seconds to wait, and
 ends in the `(CODE)`. A refused connection gives the same lead and says that
 beliq did not say when. An attempt that gets no answer ends after 20 seconds

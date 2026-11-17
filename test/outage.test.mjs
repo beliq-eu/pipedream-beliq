@@ -12,7 +12,7 @@ import { runAction } from "./harness.mjs";
 // a real HTTP server on 127.0.0.1. Global fetch only rewrites the fixed
 // https://api.beliq.eu origin to that server; the request itself goes out over
 // the real fetch. Nothing is scaled: the server sends the real
-// `Retry-After: 30`, and the host limit is a Pipedream workflow's default
+// `Retry-After: 15`, and the host limit is a Pipedream workflow's default
 // timeout for an HTTP trigger.
 const HOST_LIMIT_MS = 30_000;
 const PIPEDREAM_MAX_TIMEOUT_MS = 750_000;
@@ -59,7 +59,7 @@ function json(res, status, body, headers = {}) {
   res.end(JSON.stringify(body));
 }
 
-function databaseUnavailable(res, retryAfter = 30) {
+function databaseUnavailable(res, retryAfter = 15) {
   json(res, 503, {
     success: false,
     error: {
@@ -121,7 +121,7 @@ describe("a step during an outage ends inside the workflow's timeout", () => {
     handler = (_req, res) => databaseUnavailable(res);
     const result = await validate();
     expect(result.ok).toBe(false);
-    expect(result.message).toBe("beliq is unavailable for now: database unavailable. Try the step again in 30 seconds (DATABASE_UNAVAILABLE)");
+    expect(result.message).toBe("beliq is unavailable for now: database unavailable. Try the step again in 15 seconds (DATABASE_UNAVAILABLE)");
     expect(requests).toBe(1);
     expect(result.ms).toBeLessThan(HOST_LIMIT_MS);
   });
