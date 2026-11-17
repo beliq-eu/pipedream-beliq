@@ -8,7 +8,7 @@ export default {
   key: "beliq-generate-invoice",
   name: "Generate Invoice",
   description: "Create an e-invoice from a JSON invoice object and write it to `/tmp`: XML (XRechnung, ZUGFeRD, Factur-X, Peppol BIS, FatturaPA, Facturae, e-SLOG and KSeF FA(3)) or a PDF (a hybrid PDF/A-3 on Factur-X and ZUGFeRD, a visualization on the others). Use it when you have invoice data, e.g. from a CRM, shop or spreadsheet row, and need a file to send or archive. Returns the file's `path`, with XML output the `xml` text too, and the API's verdict on the invoice XML in `validationResult`, whose `verificationBadgeLabel` is the check depth the API states (a verdict without it states none). Pass the `path` to **Validate Invoice**, or for XRechnung, ZUGFeRD, Factur-X and Peppol BIS to **Convert Invoice**, which takes no national format. With Validate Result on (the default), an invoice that breaks a rule fails with the rule IDs instead of returning the document. With it off nothing is checked: `validationResult.verified` is `false`, and `valid` is then `false` because nothing looked, not because the document failed. Uses one document of quota. [See the documentation](https://docs.beliq.eu/api-reference/generate/)",
-  version: "0.1.0",
+  version: "0.2.0",
   type: "action",
   ai: "optimized",
   annotations: {
@@ -66,6 +66,12 @@ export default {
         "advanced",
       ],
     },
+    retryForSeconds: {
+      propDefinition: [
+        beliq,
+        "retryForSeconds",
+      ],
+    },
     syncDir: {
       type: "dir",
       accessMode: "write",
@@ -102,7 +108,9 @@ export default {
       input.template = "standard";
     }
 
-    const result = await this.beliq.generateInvoice(input);
+    const result = await this.beliq.generateInvoice(input, {
+      retryForSeconds: this.retryForSeconds,
+    });
     const out = await writeDocument(result, "invoice", this.filename);
     if (result.xml) {
       out.xml = result.xml;

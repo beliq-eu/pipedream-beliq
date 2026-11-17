@@ -93,6 +93,18 @@ export const CONTENT_TYPE_OPTIONS = [
   },
 ];
 
+// A Pipedream step ends at its workflow's timeout: 30 seconds by default for an
+// HTTP or email trigger, 750 at most on a paid plan. No retry starts after the
+// retry budget, so a call takes at most the budget plus the last attempt's
+// ATTEMPT_TIMEOUT_MS: 25 seconds at the default budget. The budget holds the
+// SDK's short backoff retries of a blip; a `Retry-After` longer than it fails
+// the step at once, and the error names the wait.
+export const DEFAULT_RETRY_SECONDS = 5;
+export const ATTEMPT_TIMEOUT_MS = 20_000;
+// 10 seconds under Pipedream's ceiling less one attempt, for the step's own work
+// around the call.
+export const MAX_RETRY_SECONDS = 720;
+
 // How many rule findings an error message lists before it is truncated. A
 // Pipedream step shows the error text, so the findings have to stay readable;
 // XRechnung reports its rules one layer at a time, so the first few are the

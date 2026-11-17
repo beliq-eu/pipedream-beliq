@@ -1,10 +1,14 @@
 import { Beliq } from "@beliq/sdk";
+import { ConfigurationError } from "@pipedream/platform";
 import { mapError } from "./common/errors.mjs";
 import {
+  ATTEMPT_TIMEOUT_MS,
   CONTENT_TYPE_OPTIONS,
   CONVERT_SOURCE_OPTIONS,
   CONVERT_TARGET_OPTIONS,
+  DEFAULT_RETRY_SECONDS,
   INPUT_SOURCE_OPTIONS,
+  MAX_RETRY_SECONDS,
   OUTPUT_OPTIONS,
   PARSE_FORMAT_OPTIONS,
   PROFILE_OPTIONS,
@@ -152,6 +156,15 @@ ${JSON.stringify(SAMPLE_INVOICE, null, 2)}
       description: "The name of the file written to `/tmp`, e.g. `INV-2026-001.xml`. Defaults to `invoice` or `converted` plus the extension the result needs.",
       optional: true,
     },
+    retryForSeconds: {
+      type: "integer",
+      label: "Retry for up to (seconds)",
+      description: `How long to keep retrying while beliq is unavailable, e.g. \`5\` (the default). A step runs no longer than its workflow's timeout, 30 seconds by default for an HTTP trigger, so raise this only together with that timeout (the workflow's Settings) and keep the timeout at least ${ATTEMPT_TIMEOUT_MS / 1000} seconds above this value. When beliq asks for a longer wait than this allows, the step fails at once and the error says how many seconds to wait. \`0\` turns retrying off.`,
+      min: 0,
+      max: MAX_RETRY_SECONDS,
+      optional: true,
+      default: DEFAULT_RETRY_SECONDS,
+    },
     advanced: {
       type: "object",
       label: "Advanced (JSON)",
@@ -160,20 +173,38 @@ ${JSON.stringify(SAMPLE_INVOICE, null, 2)}
     },
   },
   methods: {
-    /** A beliq SDK client for the connected account. The API host is fixed. */
-    _client() {
+    /**
+     * A beliq SDK client for the connected account. The API host is fixed. No
+     * retry starts after `retryForSeconds`, and each attempt ends after
+     * ATTEMPT_TIMEOUT_MS.
+     */
+    _client(retryForSeconds) {
       return new Beliq({
         apiKey: this.$auth.api_key,
+        retryBudgetMs: this._retrySeconds(retryForSeconds) * 1000,
+        timeoutMs: ATTEMPT_TIMEOUT_MS,
       });
+    },
+    /**
+     * The Retry for up to value as a number of seconds. An expression can hand
+     * over any value, and a NaN budget would never end the SDK's retries.
+     */
+    _retrySeconds(value) {
+      if (value === undefined || value === null || value === "") return DEFAULT_RETRY_SECONDS;
+      const seconds = Number(value);
+      if (!Number.isFinite(seconds) || seconds < 0 || seconds > MAX_RETRY_SECONDS) {
+        throw new ConfigurationError(`Retry for up to (seconds) must be a number from 0 to ${MAX_RETRY_SECONDS}, not ${JSON.stringify(value)}.`);
+      }
+      return seconds;
     },
     /**
      * Run one SDK operation and turn a failure into a readable error. The SDK
      * owns the wire format (raw-body upload, content-type sniff, the
      * `{ success, data, error }` envelope), so every action shares one transport.
      */
-    async _makeRequest(operation) {
+    async _makeRequest(operation, { retryForSeconds } = {}) {
       try {
-        return await operation(this._client());
+        return await operation(this._client(retryForSeconds));
       } catch (error) {
         throw mapError(error);
       }
@@ -183,26 +214,26 @@ ${JSON.stringify(SAMPLE_INVOICE, null, 2)}
       return this._makeRequest((client) => client.me());
     },
     /** Build an e-invoice document from an EN 16931 invoice object. */
-    generateInvoice(input) {
-      return this._makeRequest((client) => client.generate(input));
+    generateInvoice(input, settings) {
+      return this._makeRequest((client) => client.generate(input), settings);
     },
     /** Validate an XML or PDF invoice document and return the verdict. */
     validateInvoice({
       document, ...options
-    }) {
-      return this._makeRequest((client) => client.validate(document, options));
+    }, settings) {
+      return this._makeRequest((client) => client.validate(document, options), settings);
     },
     /** Extract a structured invoice object from an XML or PDF document. */
     parseInvoice({
       document, ...options
-    }) {
-      return this._makeRequest((client) => client.parse(document, options));
+    }, settings) {
+      return this._makeRequest((client) => client.parse(document, options), settings);
     },
     /** Convert an invoice document to another format. */
     convertInvoice({
       document, ...options
-    }) {
-      return this._makeRequest((client) => client.convert(document, options));
+    }, settings) {
+      return this._makeRequest((client) => client.convert(document, options), settings);
     },
   },
 };

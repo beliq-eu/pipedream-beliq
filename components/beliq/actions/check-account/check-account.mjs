@@ -4,7 +4,7 @@ export default {
   key: "beliq-check-account",
   name: "Check Account",
   description: "Check that the connected beliq API key works and return its account, plan and remaining document quota. Use it before a batch run to see how many documents are left, or to find out why another beliq action failed to authenticate. Costs no quota, unlike **Generate Invoice**, **Validate Invoice**, **Parse Invoice** and **Convert Invoice**, which each use one document. [See the documentation](https://docs.beliq.eu/api-reference/authentication/#verifying-a-key)",
-  version: "0.0.1",
+  version: "0.0.2",
   type: "action",
   ai: "optimized",
   annotations: {

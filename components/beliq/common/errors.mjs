@@ -1,4 +1,6 @@
-import { BeliqApiError } from "@beliq/sdk";
+import {
+  BeliqApiError, retryClass,
+} from "@beliq/sdk";
 import { MAX_REPORTED_FINDINGS } from "./constants.mjs";
 
 /**
@@ -39,17 +41,46 @@ function describeDetails(details) {
 }
 
 /**
+ * When to run the step again: the server's `Retry-After` when it sent one in
+ * whole seconds, or, for an outage the SDK stopped retrying, that it did not
+ * say. Empty for any other failure.
+ */
+function retryHint(error, unavailable) {
+  const seconds = error instanceof BeliqApiError
+    ? error.retryAfterSeconds
+    : undefined;
+  if (seconds !== undefined) {
+    return `. Try the step again in ${seconds} ${seconds === 1
+      ? "second"
+      : "seconds"}`;
+  }
+  return unavailable
+    ? ". beliq did not say when; try the step again later"
+    : "";
+}
+
+/**
  * Turn an SDK error into a flat Error with a readable message. A BeliqApiError
  * carries the typed `{ code, message, details }` from beliq's error envelope;
- * anything else is surfaced verbatim. The stable `(CODE)` stays last so a
- * workflow can match on it.
+ * an outage the SDK stopped retrying leads with that and says when to try
+ * again; anything else is surfaced verbatim. The stable `(CODE)` stays last so
+ * a workflow can match on it.
  */
 export function mapError(error) {
+  const unavailable = retryClass(error) === "budget";
+  const lead = unavailable
+    ? "beliq is unavailable for now: "
+    : "";
   if (error instanceof BeliqApiError) {
-    const body = `${error.message}${describeDetails(error.details)}`;
+    const body = `${lead}${error.message}${describeDetails(error.details)}${retryHint(error, unavailable)}`;
     return new Error(error.code
       ? `${body} (${error.code})`
       : body);
+  }
+  if (unavailable) {
+    return new Error(`${lead}could not reach the beliq API (${error.message})${retryHint(error, true)}`, {
+      cause: error,
+    });
   }
   return error instanceof Error
     ? error
