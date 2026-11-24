@@ -3,9 +3,9 @@
   "extends": ["local>beliq-eu/.github:automerge"],
   "packageRules": [
     {
-      "description": "Node stays on 22 in the workflows. Moving this repository alone would put beliq's repositories on two Node majors. The github-actions manager reads setup-node's `node-version:` input as depName `node` with packageName `actions/node-versions`, and `matchPackageNames` matches the packageName, so `actions/node-versions` is the name that holds the `node-version:` lines. Renovate proposed node 26 as https://github.com/beliq-eu/pipedream-beliq/pull/49 while this repository had no node rule. Node 22 reaches end of life on 2027-04-30 (nodejs/Release schedule.json), so this hold is temporary: lift it in the planned move of every beliq repository to a newer Node major before that date, not on its own.",
+      "description": "Node is capped below 27 in the workflows. CI tests Node 20, which Pipedream runs code steps and components on, and Node 26. Node 27 is not an LTS release, so the next move is to 28, in every beliq repository at once rather than in this one alone. The github-actions manager reads setup-node's `node-version:` input as depName `node` with packageName `actions/node-versions`, and `matchPackageNames` matches the packageName.",
       "matchPackageNames": ["node", "@types/node", "actions/node-versions"],
-      "allowedVersions": "<23.0.0"
+      "allowedVersions": "<27.0.0"
     },
     {
       "description": "Auto-merge minor updates too, once the required checks pass. The default branch of this repository carries a required status check set (the guard checks and the repository's own test check), so a green pull request means named checks ran and passed, not that nothing ran. Measured on 2026-11-02 with `GET /repos/{owner}/{repo}/rules/branches/main`; check it again before copying this rule to another repository. The two rules below take exceptions out, so they have to stay below this one.",
