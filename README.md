@@ -1,8 +1,8 @@
 # beliq connector for Pipedream
 
-Validate, generate, convert and parse EU e-invoices with the
-[beliq](https://beliq.eu) API from a Pipedream workflow. Every verdict carries the
-check depth the API states for it, or says that none was stated.
+Generate, validate, parse and convert EU e-invoices with the
+[beliq](https://beliq.eu) API from a Pipedream workflow. Its verdicts carry the
+check depth the API states for them, or say that none was stated.
 [How verification works](https://docs.beliq.eu/compliance/how-verification-works/)
 explains each depth.
 
@@ -120,12 +120,12 @@ legal document is the XML. NLCIUS always returns XML.
 The **Convert Invoice** dropdowns are shorter than the Generate one because the
 API's own convert enums are: no national format is a conversion source or target.
 
-beliq covers three steps of an e-invoice: generate, validate, and deliver (in
-development). This connector runs the first two and also parses and converts
-documents; no action of it sends or files an invoice. Until delivery through
-beliq is available, transmission (Peppol, plateforme agréée, SDI) and
-tax-authority reporting stay with your access point. Archiving stays with you,
-and beliq does not operate KSeF submission.
+beliq does five things with an e-invoice: generate, validate, parse, convert
+and deliver (in development). This connector runs the first four; no action
+of it sends or files an invoice. Until delivery through beliq is available,
+transmission (Peppol, plateforme agréée, SDI) and tax-authority reporting stay
+with your access point. Archiving stays with you, and beliq does not operate
+KSeF submission.
 
 ## Development
 
